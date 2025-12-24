@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.1">
+  <zoom_level>8</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>368</x>
+      <y>488</y>
+      <w>184</w>
+      <h>176</h>
+    </coordinates>
+    <panel_attributes>Notes Pane
+&lt;&lt;HTML&gt;&gt;
+--
+for each note:
+	ID
+	Date
+	NoteType
+	Content
+	Attachments: array[] Attachments
+
+--
+
+
+--
+Responsibilities
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>368</x>
+      <y>184</y>
+      <w>184</w>
+      <h>152</h>
+    </coordinates>
+    <panel_attributes>Client Pane
+&lt;&lt;HTML&gt;&gt;
+--
+title: "Client List"
+Search Box: "omni search"
+selectable list: First + Last Name
+--
+Responsibilities
+
+When filtering, only reveal
+customers that match the search
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>368</x>
+      <y>336</y>
+      <w>184</w>
+      <h>152</h>
+    </coordinates>
+    <panel_attributes>Details Pane
+&lt;&lt;HTML&gt;&gt;
+--
+title: 'Details'
+
+textBox: for each attribute
+--
+
+
+--
+Responsibilities
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>696</x>
+      <y>216</y>
+      <w>192</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>Client Pane Renderer
+&lt;&lt;RENDERER&gt;&gt;
+--
+
+
+--
+hooks
+selectable list --&gt; get-client-list
+omni-search --&gt; WIP
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>696</x>
+      <y>336</y>
+      <w>192</w>
+      <h>128</h>
+    </coordinates>
+    <panel_attributes>Details Pane Renderer
+&lt;&lt;RENDERER&gt;&gt;
+--
+hooks
+textBox for each --&gt; get-client</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>544</x>
+      <y>400</y>
+      <w>168</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;10.0;190.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>696</x>
+      <y>464</y>
+      <w>192</w>
+      <h>120</h>
+    </coordinates>
+    <panel_attributes>Notes Pane Renderer
+&lt;&lt;RENDERER&gt;&gt;
+--
+hooks
+notes --&gt; get-notes
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1088</x>
+      <y>328</y>
+      <w>168</w>
+      <h>176</h>
+    </coordinates>
+    <panel_attributes>Preload
+&lt;&lt;API&gt;&gt;
+--
+
+--
+Responsibilities
+-Mirror IPC Handlers
+'get-client'
+'add-client'
+'delete-client'
+'update-client'
+'get-notes'
+'add-note'
+'delete-note'
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>880</x>
+      <y>384</y>
+      <w>224</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;10.0;260.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>104</x>
+      <y>368</y>
+      <w>168</w>
+      <h>152</h>
+    </coordinates>
+    <panel_attributes>Styles
+&lt;&lt;CSS&gt;&gt;
+--
+no clue how css works</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>264</x>
+      <y>392</y>
+      <w>120</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>130.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>560</x>
+      <y>280</y>
+      <w>112</w>
+      <h>56</h>
+    </coordinates>
+    <panel_attributes>Front End
+bg=blue</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>1272</x>
+      <y>304</y>
+      <w>112</w>
+      <h>56</h>
+    </coordinates>
+    <panel_attributes>Back End
+bg=orange</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1424</x>
+      <y>328</y>
+      <w>216</w>
+      <h>280</h>
+    </coordinates>
+    <panel_attributes>Main
+&lt;&lt;Database&gt;&gt;
+--
+-db
+-mainWindow
+--
+-createDatabase(): Void
+-createWindow(): Void
+-initDatabase(): Void
+
+--
+#IPC HANDLERS#
+-get-client(event, clientID): Json
+-get-client-list(event): Json
+-add-client: Bool
+-delete-client(event, clientID): Bool
+-update-client(event, clientID): Bool
+-get-notes(event, clientID): Json
+-add-note(event, ClientID): Bool
+-delete-note(event, noteID): Bool
+
+-</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>1248</x>
+      <y>424</y>
+      <w>192</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>220.0;10.0;10.0;10.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>400</x>
+      <y>856</y>
+      <w>80</w>
+      <h>64</h>
+    </coordinates>
+    <panel_attributes>Attachment
+--
+Name
+size</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>432</x>
+      <y>656</y>
+      <w>24</w>
+      <h>216</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
+    <additional_attributes>10.0;10.0;10.0;250.0</additional_attributes>
+  </element>
+</diagram>
