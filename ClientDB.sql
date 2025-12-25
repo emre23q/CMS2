@@ -25,13 +25,12 @@ CREATE TABLE IF NOT EXISTS History (
                      DEFAULT (CURRENT_DATE),
   createdOnEpoch INTEGER  NOT NULL,
   noteType      TEXT      NOT NULL,
-  content       TEXT      NOT NULL,
+  content       TEXT      NOT NULL
 
 );
 
 
 -- Index for efficient lookup of attachments by note
-CREATE INDEX IF NOT EXISTS idx_attachments_noteID ON Attachments(noteID);
 CREATE INDEX IF NOT EXISTS idx_history_clientID ON History(clientID);
-CREATE INDEX IF NOT EXISTS idx_history_createdOnEpoch ON History(createdOnEpoch)
-CREATE INDEX IF NOT EXISTS idx_history_createdOnDate ON History(createdOn)
+CREATE INDEX IF NOT EXISTS idx_history_createdOnEpoch ON History(createdOnEpoch);
+CREATE INDEX IF NOT EXISTS idx_history_createdOnDate ON History(createdOn);

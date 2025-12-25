@@ -4,8 +4,8 @@
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>368</x>
-      <y>488</y>
+      <x>264</x>
+      <y>592</y>
       <w>184</w>
       <h>176</h>
     </coordinates>
@@ -30,8 +30,8 @@ Responsibilities
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>368</x>
-      <y>184</y>
+      <x>264</x>
+      <y>288</y>
       <w>184</w>
       <h>152</h>
     </coordinates>
@@ -53,8 +53,8 @@ customers that match the search
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>368</x>
-      <y>336</y>
+      <x>264</x>
+      <y>440</y>
       <w>184</w>
       <h>152</h>
     </coordinates>
@@ -75,8 +75,8 @@ Responsibilities
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>696</x>
-      <y>216</y>
+      <x>592</x>
+      <y>320</y>
       <w>192</w>
       <h>120</h>
     </coordinates>
@@ -95,8 +95,8 @@ omni-search --&gt; WIP
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>696</x>
-      <y>336</y>
+      <x>592</x>
+      <y>440</y>
       <w>192</w>
       <h>128</h>
     </coordinates>
@@ -110,8 +110,8 @@ textBox for each --&gt; get-client</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>544</x>
-      <y>400</y>
+      <x>440</x>
+      <y>504</y>
       <w>168</w>
       <h>24</h>
     </coordinates>
@@ -121,8 +121,8 @@ textBox for each --&gt; get-client</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>696</x>
-      <y>464</y>
+      <x>592</x>
+      <y>568</y>
       <w>192</w>
       <h>120</h>
     </coordinates>
@@ -137,8 +137,8 @@ notes --&gt; get-notes
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>1088</x>
-      <y>328</y>
+      <x>984</x>
+      <y>432</y>
       <w>168</w>
       <h>176</h>
     </coordinates>
@@ -162,8 +162,8 @@ Responsibilities
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>880</x>
-      <y>384</y>
+      <x>776</x>
+      <y>488</y>
       <w>224</w>
       <h>24</h>
     </coordinates>
@@ -173,8 +173,8 @@ Responsibilities
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>104</x>
-      <y>368</y>
+      <x>0</x>
+      <y>472</y>
       <w>168</w>
       <h>152</h>
     </coordinates>
@@ -187,8 +187,8 @@ no clue how css works</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>264</x>
-      <y>392</y>
+      <x>160</x>
+      <y>496</y>
       <w>120</w>
       <h>24</h>
     </coordinates>
@@ -198,8 +198,8 @@ no clue how css works</panel_attributes>
   <element>
     <id>UMLNote</id>
     <coordinates>
-      <x>560</x>
-      <y>280</y>
+      <x>456</x>
+      <y>384</y>
       <w>112</w>
       <h>56</h>
     </coordinates>
@@ -210,8 +210,8 @@ bg=blue</panel_attributes>
   <element>
     <id>UMLNote</id>
     <coordinates>
-      <x>1272</x>
-      <y>304</y>
+      <x>1168</x>
+      <y>408</y>
       <w>112</w>
       <h>56</h>
     </coordinates>
@@ -222,8 +222,8 @@ bg=orange</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>1424</x>
-      <y>328</y>
+      <x>1320</x>
+      <y>432</y>
       <w>216</w>
       <h>280</h>
     </coordinates>
@@ -254,8 +254,8 @@ bg=orange</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>1248</x>
-      <y>424</y>
+      <x>1144</x>
+      <y>528</y>
       <w>192</w>
       <h>24</h>
     </coordinates>
@@ -265,8 +265,8 @@ bg=orange</panel_attributes>
   <element>
     <id>UMLClass</id>
     <coordinates>
-      <x>400</x>
-      <y>856</y>
+      <x>296</x>
+      <y>960</y>
       <w>80</w>
       <h>64</h>
     </coordinates>
@@ -279,8 +279,8 @@ size</panel_attributes>
   <element>
     <id>Relation</id>
     <coordinates>
-      <x>432</x>
-      <y>656</y>
+      <x>328</x>
+      <y>760</y>
       <w>24</w>
       <h>216</h>
     </coordinates>

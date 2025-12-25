@@ -6,7 +6,7 @@
     "start": "electron ."
   },
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^39.2.7"
   },
   "dependencies": {
     "sql.js": "^1.8.0"
