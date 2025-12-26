@@ -5,7 +5,7 @@
     <id>UMLClass</id>
     <coordinates>
       <x>264</x>
-      <y>592</y>
+      <y>424</y>
       <w>184</w>
       <h>176</h>
     </coordinates>
@@ -31,7 +31,7 @@ Responsibilities
     <id>UMLClass</id>
     <coordinates>
       <x>264</x>
-      <y>288</y>
+      <y>120</y>
       <w>184</w>
       <h>152</h>
     </coordinates>
@@ -54,7 +54,7 @@ customers that match the search
     <id>UMLClass</id>
     <coordinates>
       <x>264</x>
-      <y>440</y>
+      <y>272</y>
       <w>184</w>
       <h>152</h>
     </coordinates>
@@ -76,7 +76,7 @@ Responsibilities
     <id>UMLClass</id>
     <coordinates>
       <x>592</x>
-      <y>320</y>
+      <y>152</y>
       <w>192</w>
       <h>120</h>
     </coordinates>
@@ -96,7 +96,7 @@ omni-search --&gt; WIP
     <id>UMLClass</id>
     <coordinates>
       <x>592</x>
-      <y>440</y>
+      <y>272</y>
       <w>192</w>
       <h>128</h>
     </coordinates>
@@ -111,7 +111,7 @@ textBox for each --&gt; get-client</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>440</x>
-      <y>504</y>
+      <y>336</y>
       <w>168</w>
       <h>24</h>
     </coordinates>
@@ -122,7 +122,7 @@ textBox for each --&gt; get-client</panel_attributes>
     <id>UMLClass</id>
     <coordinates>
       <x>592</x>
-      <y>568</y>
+      <y>400</y>
       <w>192</w>
       <h>120</h>
     </coordinates>
@@ -138,7 +138,7 @@ notes --&gt; get-notes
     <id>UMLClass</id>
     <coordinates>
       <x>984</x>
-      <y>432</y>
+      <y>264</y>
       <w>168</w>
       <h>176</h>
     </coordinates>
@@ -163,7 +163,7 @@ Responsibilities
     <id>Relation</id>
     <coordinates>
       <x>776</x>
-      <y>488</y>
+      <y>320</y>
       <w>224</w>
       <h>24</h>
     </coordinates>
@@ -174,7 +174,7 @@ Responsibilities
     <id>UMLClass</id>
     <coordinates>
       <x>0</x>
-      <y>472</y>
+      <y>304</y>
       <w>168</w>
       <h>152</h>
     </coordinates>
@@ -188,7 +188,7 @@ no clue how css works</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>160</x>
-      <y>496</y>
+      <y>328</y>
       <w>120</w>
       <h>24</h>
     </coordinates>
@@ -199,7 +199,7 @@ no clue how css works</panel_attributes>
     <id>UMLNote</id>
     <coordinates>
       <x>456</x>
-      <y>384</y>
+      <y>216</y>
       <w>112</w>
       <h>56</h>
     </coordinates>
@@ -211,7 +211,7 @@ bg=blue</panel_attributes>
     <id>UMLNote</id>
     <coordinates>
       <x>1168</x>
-      <y>408</y>
+      <y>240</y>
       <w>112</w>
       <h>56</h>
     </coordinates>
@@ -220,42 +220,10 @@ bg=orange</panel_attributes>
     <additional_attributes/>
   </element>
   <element>
-    <id>UMLClass</id>
-    <coordinates>
-      <x>1320</x>
-      <y>432</y>
-      <w>216</w>
-      <h>280</h>
-    </coordinates>
-    <panel_attributes>Main
-&lt;&lt;Database&gt;&gt;
---
--db
--mainWindow
---
--createDatabase(): Void
--createWindow(): Void
--initDatabase(): Void
-
---
-#IPC HANDLERS#
--get-client(event, clientID): Json
--get-client-list(event): Json
--add-client: Bool
--delete-client(event, clientID): Bool
--update-client(event, clientID): Bool
--get-notes(event, clientID): Json
--add-note(event, ClientID): Bool
--delete-note(event, noteID): Bool
-
--</panel_attributes>
-    <additional_attributes/>
-  </element>
-  <element>
     <id>Relation</id>
     <coordinates>
       <x>1144</x>
-      <y>528</y>
+      <y>360</y>
       <w>192</w>
       <h>24</h>
     </coordinates>
@@ -266,7 +234,7 @@ bg=orange</panel_attributes>
     <id>UMLClass</id>
     <coordinates>
       <x>296</x>
-      <y>960</y>
+      <y>792</y>
       <w>80</w>
       <h>64</h>
     </coordinates>
@@ -280,11 +248,46 @@ size</panel_attributes>
     <id>Relation</id>
     <coordinates>
       <x>328</x>
-      <y>760</y>
+      <y>592</y>
       <w>24</w>
       <h>216</h>
     </coordinates>
     <panel_attributes>lt=&lt;&lt;&lt;&lt;-</panel_attributes>
     <additional_attributes>10.0;10.0;10.0;250.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>1320</x>
+      <y>264</y>
+      <w>448</w>
+      <h>344</h>
+    </coordinates>
+    <panel_attributes>Main
+&lt;&lt;Database&gt;&gt;
+--
+-db: Database
+-mainWindow: BrowserWindow
+--
++createWindow(): Void
++createDatabaseFolderIfNone(databaseFolder: String, attachmentsFolder: String): Void
++initDatabase(): Promise&lt;Void&gt;
++saveDatabase(): Void
++mapDbResult(result: Array): Array&lt;Object&gt;
++app.whenReady(): Promise&lt;Void&gt;
++app.on('window-all-closed'): Void
+--
+#IPC HANDLERS#
++get-client-list(): Array&lt;Object&gt;
++get-client(event, clientID: Number): Object | Null
++add-client(event, clientData: Object): Number
++delete-client(event, clientID: Number): Boolean
++update-client(event, clientID: Number, clientData: Object): Boolean
++add-note(event, noteData: Object): Number
++delete-note(event, noteID: Number): Boolean
++update-note(event, noteID: Number, noteData: Object): Boolean
++get-notes(event, clientID: Number): Array&lt;Object&gt;
++search-clients(event, searchTerm: String): Array&lt;Object&gt;</panel_attributes>
+    <additional_attributes/>
   </element>
 </diagram>
