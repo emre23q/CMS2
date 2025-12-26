@@ -86,5 +86,59 @@ app.on('window-all-closed', () => {
 
 });
 
-
+function mapDbResult( result ){
+    if (!result[0]){
+        return [];
+    }   
+    const columns = result[0].columns;
+    const values = result[0].values;
+    
+    return values.map(row => {
+        const obj = {};
+        columns.forEach((col, index) => {
+        obj[col] = row[index];
+        });
+        return obj;
+    });
+}
 // Handle IPC events for database operations
+ipcMain.handle('get-client-list', () => {
+    const result = db.exec("SELECT firstName, lastName FROM Client")
+    return mapDbResult(result);
+
+});
+ipcMain.handle('get-client', (event, clientID) => {
+    const result = db.exec("SELECT * FROM Client WHERE clientID = ?", [clientID]);
+    const client = mapDbResult(result);
+    return client[0] || null;
+});
+/* example data format
+{
+  firstName: 'John',
+  lastName: 'Smith',
+  email: 'john@email.com'
+}
+  */
+ipcMain.handle('add-client', (event, clientData) => {
+// extract keys and map them to the sql database fields
+    try {
+        const schemaResult = db.exec("PRAGMA table_info(Client);");
+        const validColumns = schemaResult[0].values.map(col => col[1]); // get column names
+        const columns = Object.keys(clientData).filter(col => validColumns.includes(col));
+        if (columns.length === 0 ){
+            throw new Error('No valid columns found in client data.');
+        }
+        const values = columns.map(col => clientData[col]);
+        const columnNames = columns.join(", ");
+        const placeholders = columns.map(() => "?").join(", ");
+        const sql = db.run(`INSERT INTO Client (${columnNames}) VALUES (${placeholders})`);
+        const result = db.exec("SELECT last_insert_rowid() as clientID;");
+        saveDatabase();
+        const newClientID = result[0].values[0][0];  // Extract the ID
+        return newClientID;
+    } catch (error) {
+        console.error('Error adding client:', error);
+        throw new Error('Failed to add client: ' + error.message);
+    }
+}
+);
