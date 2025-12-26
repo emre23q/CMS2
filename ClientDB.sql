@@ -21,9 +21,7 @@ CREATE TABLE IF NOT EXISTS History (
   clientID      INTEGER   NOT NULL
                          REFERENCES Client(clientID)
                          ON DELETE CASCADE,
-  createdOn     DATE      NOT NULL
-                     DEFAULT (CURRENT_DATE),
-  createdOnEpoch INTEGER  NOT NULL,
+  createdOn DATETIME NOT NULL DEFAULT (datetime('now')),
   noteType      TEXT      NOT NULL,
   content       TEXT      NOT NULL
 

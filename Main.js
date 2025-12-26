@@ -13,8 +13,9 @@ function createWindow() {
         width: 800,
         height: 600,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false,
+            nodeIntegration: false,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'Preload.js'),
         },
     });
     mainWindow.loadFile('Index.html');
@@ -103,12 +104,12 @@ function mapDbResult( result ){
 }
 // Handle IPC events for database operations
 ipcMain.handle('get-client-list', () => {
-    const result = db.exec("SELECT firstName, lastName FROM Client")
+    const result = db.exec("SELECT clientID, firstName, lastName FROM Client")
     return mapDbResult(result);
 
 });
 ipcMain.handle('get-client', (event, clientID) => {
-    const result = db.exec("SELECT * FROM Client WHERE clientID = ?", [clientID]);
+    const result = db.exec("SELECT clientID, firstName, lastName FROM Client ORDER BY lastName, firstName")
     const client = mapDbResult(result);
     return client[0] || null;
 });
@@ -131,7 +132,8 @@ ipcMain.handle('add-client', (event, clientData) => {
         const values = columns.map(col => clientData[col]);
         const columnNames = columns.join(", ");
         const placeholders = columns.map(() => "?").join(", ");
-        const sql = db.run(`INSERT INTO Client (${columnNames}) VALUES (${placeholders})`);
+        const sql = `INSERT INTO Client (${columnNames}) VALUES (${placeholders})`;
+        db.run(sql, values);        
         const result = db.exec("SELECT last_insert_rowid() as clientID;");
         saveDatabase();
         const newClientID = result[0].values[0][0];  // Extract the ID
@@ -142,3 +144,146 @@ ipcMain.handle('add-client', (event, clientData) => {
     }
 }
 );
+
+ipcMain.handle('delete-client', (event, clientID) => {
+    try {
+        db.run("DELETE FROM Client WHERE clientID = ?", [clientID]);
+        saveDatabase();
+        return true;
+    } catch (error) {
+        console.error('Error deleting client:', error);
+        throw new Error('Failed to delete client: ' + error.message);
+    }
+});
+
+ipcMain.handle('update-client', (event, clientID, clientData) => {
+    try {
+        const schemaResult = db.exec("PRAGMA table_info(Client)");
+        const validColumns = schemaResult[0].values.map(col => col[1]);
+                const columns = Object.keys(clientData)
+            .filter(col => validColumns.includes(col))
+            .filter(col => col !== 'clientID'); 
+
+        if (columns.length === 0) {
+            throw new Error('No valid columns to update');
+        }
+
+        const setClause = columns.map(col => `${col} = ?`).join(', ');
+        const values = [...columns.map(col => clientData[col]), clientID];
+        const sql = `UPDATE Client SET ${setClause} WHERE clientID = ?`;
+        db.run(sql, values);
+        saveDatabase();
+        return true;
+    
+    } catch (error) {
+        console.error('Error updating client:', error);
+        throw new Error('Failed to update client: ' + error.message);
+    }
+});
+/*example data format
+{
+  clientID: 1,
+  noteType: 'General',
+  content: 'This is a note.'}
+*/
+ipcMain.handle('add-note', (event,noteData) => {
+    try {
+        const noteType = noteData.noteType;
+        const content = noteData.content;
+        const clientID = noteData.clientID;
+        db.run("INSERT INTO History (clientID, noteType, content) VALUES (?, ?, ?)", [clientID, noteType, content]);
+        saveDatabase();
+        const result = db.exec("SELECT last_insert_rowid() as noteID;");
+        const newNoteID = result[0].values[0][0];
+        return newNoteID;
+    } catch (error) {
+        console.error('Error adding note:', error);
+        throw new Error('Failed to add note: ' + error.message);
+    }
+});
+
+ipcMain.handle('delete-note', (event, noteID) => {
+    try {
+        db.run("DELETE FROM History WHERE noteID = ?", [noteID]);
+        saveDatabase();
+        return true;
+
+    } catch (error) {
+        console.error('Error deleting note:', error);
+        throw new Error('Failed to delete note: ' + error.message);
+    }
+});
+
+/* example data format
+{
+  noteType: 'Updated Type',
+  content: 'Updated content.'
+}
+*/
+
+ipcMain.handle('update-note', (event, noteID, noteData) => {
+    try {
+        const schemaResult = db.exec("PRAGMA table_info(History)");
+        const validColumns = schemaResult[0].values.map(col => col[1]);
+        const columns = Object.keys(noteData)
+            .filter(col => validColumns.includes(col))
+            .filter(col => col !== 'noteID');
+        
+        if (columns.length === 0) {
+            throw new Error('No valid columns to update');
+        }
+        const setClause = columns.map(col => `${col} = ?`).join(', ');
+        const values = [...columns.map(col => noteData[col]), noteID];
+        const sql = `UPDATE History SET ${setClause} WHERE noteID = ?`;
+        db.run(sql, values);
+        saveDatabase();
+        return true;
+        
+    } catch (error) {
+        console.error('Error updating note:', error);
+        throw new Error('Failed to update note: ' + error.message);
+    }
+});
+
+ipcMain.handle('get-notes', (event, clientID) => {
+    try {
+        const result = db.exec("SELECT * FROM History WHERE clientID = ? ORDER BY createdOn DESC",[clientID]);
+        return mapDbResult(result);
+    } catch (error) {
+        console.error('Error getting notes:', error);
+        throw new Error('Failed to get notes: ' + error.message);
+    }
+});
+
+ipcMain.handle('search-clients', (event, searchTerm) => {
+    try {
+        // Empty search = all clients
+        if (!searchTerm || searchTerm.trim() === '') {
+            const result = db.exec('SELECT clientID, firstName, lastName FROM Client ORDER BY lastName, firstName');
+            return mapDbResult(result);
+        }
+        
+        const pattern = `%${searchTerm}%`;
+        
+        const sql = `
+            SELECT DISTINCT c.clientID, c.firstName, c.lastName
+            FROM Client c
+            LEFT JOIN History h ON c.clientID = h.clientID
+            WHERE c.firstName LIKE ?
+               OR c.lastName LIKE ?
+               OR c.email LIKE ?
+               OR c.phone LIKE ?
+               OR c.address LIKE ?
+               OR h.noteType LIKE ?
+               OR h.content LIKE ?
+            ORDER BY c.lastName, c.firstName
+        `;
+        
+        const result = db.exec(sql, [pattern, pattern, pattern, pattern, pattern, pattern, pattern]);
+        return mapDbResult(result);
+        
+    } catch (error) {
+        console.error('Error searching clients:', error);
+        throw new Error('Failed to search clients: ' + error.message);
+    }
+});
