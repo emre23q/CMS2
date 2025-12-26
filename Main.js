@@ -10,8 +10,8 @@ let mainWindow = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1250,
+        height: 800,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -99,17 +99,18 @@ function mapDbResult( result ){
         columns.forEach((col, index) => {
         obj[col] = row[index];
         });
+        console.log("returning obj:", obj);
         return obj;
     });
 }
 // Handle IPC events for database operations
 ipcMain.handle('get-client-list', () => {
-    const result = db.exec("SELECT clientID, firstName, lastName FROM Client")
+    const result = db.exec("SELECT clientID, firstName, lastName FROM Client ORDER BY lastName, firstName")
     return mapDbResult(result);
 
 });
 ipcMain.handle('get-client', (event, clientID) => {
-    const result = db.exec("SELECT clientID, firstName, lastName FROM Client ORDER BY lastName, firstName")
+    const result = db.exec("SELECT * FROM Client WHERE clientID = ?", [clientID]);
     const client = mapDbResult(result);
     return client[0] || null;
 });
