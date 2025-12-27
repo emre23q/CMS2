@@ -114,6 +114,31 @@ ipcMain.handle('get-client', (event, clientID) => {
     const client = mapDbResult(result);
     return client[0] || null;
 });
+
+ipcMain.handle('get-client-schema', () => {
+    try {
+        const result = db.exec("PRAGMA table_info(Client)");
+        if (!result[0]) {
+            return [];
+        }
+        
+        const columns = result[0].columns;
+        const values = result[0].values;
+        
+        return values.map(row => ({
+            cid: row[0],
+            name: row[1],
+            type: row[2],
+            notnull: row[3],
+            dflt_value: row[4],
+            pk: row[5]
+        }));
+    } catch (error) {
+        console.error('Error getting client schema:', error);
+        throw new Error('Failed to get client schema: ' + error.message);
+    }
+});
+
 /* example data format
 {
   firstName: 'John',

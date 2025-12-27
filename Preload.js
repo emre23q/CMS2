@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('api', {
     getClient: (clientID) => ipcRenderer.invoke('get-client', clientID),
     
     /**
+     * Get the Client table schema
+     * @returns {Promise<Array>} Array of field objects with name, type, notnull, dflt_value, pk
+     */
+    getClientSchema: () => ipcRenderer.invoke('get-client-schema'),
+    
+    /**
      * Add a new client
      * @param {Object} clientData - Client data (firstName, lastName, email, etc.)
      * @returns {Promise<number>} The new client's ID

@@ -10,7 +10,7 @@
    ============================================ */
 :root {
     /* Font Scale - Adjust this one number to change all text sizes */
-    --font-scale: 1.5;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
+    --font-scale: 1.25;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
     
     /* Base font sizes (scaled automatically) */
     --font-xs: calc(11px * var(--font-scale));   /* Small labels */
@@ -36,6 +36,7 @@
     --color-text-secondary: #ccc;
     --color-text-muted: #888;
     --color-border: #333;
+    --color-error: #e74c3c;
 }
 
 /* Body - dark theme */
@@ -105,7 +106,14 @@ body {
     flex-shrink: 0;
     display: flex;                   
     justify-content: space-between;   
-    align-items: center;              
+    align-items: center;
+}
+
+/* Header buttons container (for tick + X) */
+.header-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
 
@@ -157,6 +165,29 @@ body {
     word-break: break-word;
 }
 
+/* Editable fields */
+.detail-item span[contenteditable="true"] {
+    cursor: text;
+    outline: none;
+}
+
+.detail-item span[contenteditable="true"]:focus {
+    background-color: #353535;
+    box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+/* Uneditable fields (clientID, clientSince in add mode) */
+.detail-item span.uneditable {
+    background-color: #1a1a1a;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* Required empty fields - red border */
+.detail-item span.required-empty {
+    border: 2px solid var(--color-error);
+}
+
 /* Client list (ul) */
 .client-list {
     list-style: none;
@@ -185,6 +216,13 @@ body {
 .client-list li.active {
     background-color: var(--color-accent);
     border-left: 3px solid var(--color-accent-bright);
+}
+
+/* Disabled client list (during add mode) */
+.client-list.disabled li {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 /* Notes list */
@@ -236,6 +274,10 @@ body {
     font-size: var(--font-md);
 }
 
+.empty-message.grayed-out {
+    opacity: 0.5;
+}
+
 /* Scrollbar styling */
 .pane-content::-webkit-scrollbar {
     width: 8px;
@@ -268,7 +310,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s;
+    transition: all 1s ease-in-out;
 }
 
 .add-button:hover {
@@ -277,4 +319,129 @@ body {
 
 .add-button:active {
     transform: scale(0.95);
+}
+
+/* Cancel mode - X button (rotated + with red background) */
+.add-button.cancel-mode {
+    transform: rotate(45deg);
+    background-color: var(--color-error);
+}
+
+.add-button.cancel-mode:hover {
+    background-color: #c0392b;
+}
+
+/* Tick button */
+.tick-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #888;
+    color: white;
+    border: none;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.tick-button:not(.disabled) {
+    background-color: var(--color-accent);
+    cursor: pointer;
+}
+
+.tick-button:not(.disabled):hover {
+    background-color: var(--color-accent-bright);
+}
+
+.tick-button:not(.disabled):active {
+    transform: scale(0.95);
+}
+
+.tick-button.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Confirmation dialog overlay */
+.confirmation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.confirmation-overlay.show {
+    opacity: 1;
+}
+
+/* Confirmation dialog box */
+.confirmation-dialog {
+    position: absolute;
+    background-color: var(--color-bg-secondary);
+    border: 2px solid var(--color-error);
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 200px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transform: translateX(-20px);
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.confirmation-overlay.show .confirmation-dialog {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.confirmation-dialog p {
+    font-size: var(--font-lg);
+    color: var(--color-text-primary);
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.confirmation-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.confirmation-buttons button {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.confirm-yes {
+    background-color: var(--color-error);
+    color: white;
+}
+
+.confirm-yes:hover {
+    background-color: #c0392b;
+}
+
+.confirm-no {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.confirm-no:hover {
+    background-color: #3a3a3a;
 }
