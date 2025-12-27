@@ -198,6 +198,7 @@ ipcMain.handle('update-client', (event, clientID, clientData) => {
         const values = [...columns.map(col => clientData[col]), clientID];
         const sql = `UPDATE Client SET ${setClause} WHERE clientID = ?`;
         db.run(sql, values);
+        console.log("running sql:", sql, values);
         saveDatabase();
         return true;
     
