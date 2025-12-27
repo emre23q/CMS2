@@ -10,7 +10,7 @@
    ============================================ */
 :root {
     /* Font Scale - Adjust this one number to change all text sizes */
-    --font-scale: 1.25;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
+    --font-scale: 1.5;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
     
     /* Base font sizes (scaled automatically) */
     --font-xs: calc(11px * var(--font-scale));   /* Small labels */
@@ -176,6 +176,19 @@ body {
     box-shadow: 0 0 0 2px var(--color-accent);
 }
 
+/* Editable fields in view mode (double-click to edit) */
+.detail-item span.editable {
+    cursor: pointer;
+}
+
+/* Field being edited via double-click */
+.detail-item span.editing {
+    background-color: #353535;
+    box-shadow: 0 0 0 2px var(--color-accent);
+    cursor: text;
+    outline: none;
+}
+
 /* Uneditable fields (clientID, clientSince in add mode) */
 .detail-item span.uneditable {
     background-color: #1a1a1a;
@@ -186,6 +199,43 @@ body {
 /* Required empty fields - red border */
 .detail-item span.required-empty {
     border: 2px solid var(--color-error);
+}
+
+/* Toast notification */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: var(--color-bg-secondary);
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 250px;
+    max-width: 400px;
+    transform: translateX(500px);
+    transition: transform 0.3s ease;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast.error {
+    border-left: 4px solid var(--color-error);
+}
+
+.toast.success {
+    border-left: 4px solid var(--color-accent);
+}
+
+.toast-message {
+    flex: 1;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
 }
 
 /* Client list (ul) */
@@ -310,15 +360,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease-in-out;
+    transition: transform 0.5s ease-in-out, background-color 0.3s ease;
 }
 
 .add-button:hover {
     background-color: var(--color-accent-bright);
-}
-
-.add-button:active {
-    transform: scale(0.95);
 }
 
 /* Cancel mode - X button (rotated + with red background) */

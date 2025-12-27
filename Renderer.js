@@ -93,8 +93,13 @@ async function loadClientDetails(clientID) {
             
             // Create value span
             const span = document.createElement('span');
-            span.dataset.field = key; // for potential future use
+            span.dataset.field = key;
             span.textContent = value || '-';
+            
+            // Mark editable fields (all except clientID)
+            if (key !== 'clientID') {
+                span.classList.add('editable');
+            }
             
             // Add to detail item
             detailItem.appendChild(label);
@@ -103,6 +108,9 @@ async function loadClientDetails(clientID) {
             // Add to grid
             detailsGrid.appendChild(detailItem);
         });
+        
+        // Enable field editing
+        enableFieldEditing();
         
         console.log('Loaded details for client:', clientID);
         
@@ -641,6 +649,215 @@ function removeConfirmationDialog() {
             overlay.remove();
         }, 200);
     }
+}
+
+/**
+ * Enable double-click editing on fields
+ */
+function enableFieldEditing() {
+    // Don't enable if in add mode
+    if (isAddMode) return;
+    
+    const editableFields = document.querySelectorAll('.detail-item span.editable');
+    
+    editableFields.forEach(span => {
+        span.addEventListener('dblclick', () => handleFieldDoubleClick(span));
+    });
+}
+
+/**
+ * Handle double-click on a field to start editing
+ */
+function handleFieldDoubleClick(span) {
+    // Don't allow editing in add mode
+    if (isAddMode) return;
+    
+    // Don't allow editing if already editing
+    if (span.classList.contains('editing')) return;
+    
+    // Store original value
+    span.dataset.originalValue = span.textContent;
+    
+    // Make editable
+    span.contentEditable = 'true';
+    span.classList.add('editing');
+    
+    // Focus and select all text
+    span.focus();
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    // Add event listeners
+    span.addEventListener('blur', handleFieldBlur);
+    span.addEventListener('keydown', handleFieldKeydown);
+}
+
+/**
+ * Handle blur (clicking away) from editing field
+ */
+async function handleFieldBlur(event) {
+    const span = event.target;
+    
+    // Get new value
+    const newValue = span.textContent.trim();
+    const originalValue = span.dataset.originalValue;
+    const fieldName = span.dataset.field;
+    
+    // Remove editing state
+    span.contentEditable = 'false';
+    span.classList.remove('editing');
+    
+    // Remove event listeners
+    span.removeEventListener('blur', handleFieldBlur);
+    span.removeEventListener('keydown', handleFieldKeydown);
+    
+    // If value unchanged, just exit
+    if (newValue === originalValue) {
+        return;
+    }
+    
+    // Validate
+    const validationResult = validateField(fieldName, newValue);
+    if (!validationResult.valid) {
+        // Revert and show error
+        span.textContent = originalValue;
+        showToast(validationResult.error, 'error');
+        return;
+    }
+    
+    // Save
+    await saveFieldEdit(span, fieldName, validationResult.value);
+}
+
+/**
+ * Handle keydown events while editing
+ */
+function handleFieldKeydown(event) {
+    const span = event.target;
+    
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        span.blur(); // Trigger save via blur handler
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+        // Revert
+        const originalValue = span.dataset.originalValue;
+        span.textContent = originalValue;
+        
+        // Exit editing mode
+        span.contentEditable = 'false';
+        span.classList.remove('editing');
+        span.removeEventListener('blur', handleFieldBlur);
+        span.removeEventListener('keydown', handleFieldKeydown);
+    }
+}
+
+/**
+ * Validate field value
+ * Returns: { valid: boolean, value: any, error: string }
+ */
+function validateField(fieldName, value) {
+    // Get field schema
+    const field = clientSchema ? clientSchema.find(f => f.name === fieldName) : null;
+    
+    // Check if required field is empty
+    if (field && field.notnull === 1 && field.pk !== 1) {
+        if (!value || value.trim() === '') {
+            return {
+                valid: false,
+                error: `${formatFieldName(fieldName)} is required and cannot be empty`
+            };
+        }
+    }
+    
+    // Validate DOB
+    if (fieldName === 'dob') {
+        const parsedDate = parseDateInput(value);
+        if (!parsedDate) {
+            return {
+                valid: false,
+                error: 'Invalid date format. Please use DD/MM/YYYY'
+            };
+        }
+        return {
+            valid: true,
+            value: parsedDate
+        };
+    }
+    
+    // All other fields - accept as is
+    return {
+        valid: true,
+        value: value
+    };
+}
+
+/**
+ * Save field edit to backend
+ */
+async function saveFieldEdit(span, fieldName, newValue) {
+    if (!currentClientID) return;
+    
+    try {
+        // Prepare update data
+        const updateData = {};
+        updateData[fieldName] = newValue;
+        
+        // Call API
+        await window.api.updateClient(currentClientID, updateData);
+        
+        // Update span with new value
+        span.textContent = newValue;
+        
+        console.log(`Updated ${fieldName} for client ${currentClientID}`);
+        
+    } catch (error) {
+        console.error('Error updating field:', error);
+        
+        // Revert to original
+        const originalValue = span.dataset.originalValue;
+        span.textContent = originalValue;
+        
+        showToast(`Failed to save: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'error') {
+    // Remove existing toast if any
+    const existingToast = document.querySelector('.toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+    
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'toast-message';
+    messageDiv.textContent = message;
+    
+    toast.appendChild(messageDiv);
+    document.body.appendChild(toast);
+    
+    // Trigger animation
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
 }
 
 /**
