@@ -90,6 +90,7 @@ async function loadClientDetails(clientID) {
             
             // Create value span
             const span = document.createElement('span');
+            span.dataset.field = key; // for potential future use
             span.textContent = value || '-';
             
             // Add to detail item
@@ -176,7 +177,7 @@ async function loadClientNotes(clientID) {
 }
 
 /**
- * Format field names for display
+ * Format field names for display, database fields to user-friendly labels
  */
 function formatFieldName(fieldName) {
     const specialCases = {
