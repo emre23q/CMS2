@@ -317,11 +317,8 @@ async function enterAddMode() {
     const notesContainer = document.querySelector('.pane-notes .pane-content');
     notesContainer.innerHTML = '<p class="empty-message grayed-out">No notes - save client first</p>';
     
-    // Transform + button to X (rotate it 45 degrees, keep the + symbol)
+    // Create button container and move add button into it FIRST
     const addButton = document.querySelector('.add-button');
-    addButton.classList.add('cancel-mode');
-    
-    // Create button container and move add button into it
     const customerListHeader = document.querySelector('.pane-left .pane-header');
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'header-buttons';
@@ -338,6 +335,11 @@ async function enterAddMode() {
     tickButton.id = 'tick-button';
     tickButton.addEventListener('click', submitNewClient);
     buttonContainer.insertBefore(tickButton, addButton);
+    
+    // THEN transform + button to X (rotate it 45 degrees) - use setTimeout to ensure DOM has settled
+    setTimeout(() => {
+        addButton.classList.add('cancel-mode');
+    }, 10);
     
     // Start validation interval
     validationIntervalID = setInterval(validateRequiredFields, 500);
@@ -551,12 +553,16 @@ function exitAddMode(requireConfirmation = true) {
     const customerListHeader = document.querySelector('.pane-left .pane-header');
     
     if (buttonContainer && addButton) {
-        // Remove cancel-mode class to rotate back to +
+        // Remove cancel-mode class to rotate back to + first
         addButton.classList.remove('cancel-mode');
-        // Move add button back to header
-        customerListHeader.appendChild(addButton);
-        // Remove the container
-        buttonContainer.remove();
+        
+        // Wait for rotation animation to complete, then move button
+        setTimeout(() => {
+            // Move add button back to header
+            customerListHeader.appendChild(addButton);
+            // Remove the container
+            buttonContainer.remove();
+        }, 500); // Match the CSS transition duration
     }
     
     // Clear details grid
