@@ -121,6 +121,107 @@ body {
     font-size: var(--font-xl);
     font-weight: 600;
     color: var(--color-text-primary);
+    cursor: default;
+}
+
+/* Search mode header */
+.pane-header.search-active {
+    background-color: #1a3a3d;
+}
+
+/* Search input container */
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    background-color: var(--color-bg-tertiary);
+    border: 2px solid var(--color-accent);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+    outline: none;
+}
+
+.search-clear {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+/* Highlight matching text - applies everywhere */
+.highlight {
+    background-color: #ffd700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+/* Specific highlight styles for different contexts */
+.client-list li .highlight {
+    background-color: #ffd700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.detail-item span .highlight {
+    background-color: #ffd700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.note-content .highlight {
+    background-color: #ffd700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.note-type .highlight {
+    background-color: #ffd700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+
+.attachment-link .highlight {
+    background-color: #ffd700 !important;
+    color: #000 !important;
+    font-weight: bold !important;
+    padding: 2px 4px;
+    border-radius: 2px;
 }
 
 /* Pane content */
@@ -183,7 +284,6 @@ body {
 
 /* Field being edited via double-click */
 .detail-item span.editing {
-    background-color: #353535;
     box-shadow: 0 0 0 2px var(--color-accent);
     cursor: text;
     outline: none;
@@ -289,6 +389,17 @@ body {
     border-left: 3px solid var(--color-accent);
     padding: 12px 15px;
     border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.note-item:hover {
+    background-color: #252525;
+}
+
+.note-item.editing {
+    cursor: default;
+    background-color: #252525;
 }
 
 .note-header {
@@ -296,6 +407,12 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
+}
+
+.note-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .note-type {
@@ -310,10 +427,306 @@ body {
     color: var(--color-text-muted);
 }
 
+.note-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.note-action-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: var(--font-xs);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-action-btn:hover {
+    background-color: var(--color-bg-tertiary);
+    border-color: var(--color-accent);
+}
+
+.note-action-btn.delete:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
 .note-content {
     font-size: var(--font-md);
     color: var(--color-text-secondary);
     line-height: 1.5;
+}
+
+/* Inline note editing */
+.note-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.note-edit-type {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+}
+
+.note-edit-content {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+    font-family: inherit;
+    resize: vertical;
+}
+
+.note-edit-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.note-edit-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-edit-btn.save {
+    background-color: var(--color-accent);
+    color: white;
+}
+
+.note-edit-btn.save:hover {
+    background-color: var(--color-accent-bright);
+}
+
+.note-edit-btn.cancel {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.note-edit-btn.cancel:hover {
+    background-color: #3a3a3a;
+}
+
+/* Attachments section */
+.note-attachments {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+}
+
+.note-attachments-title {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.note-attachments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px;
+}
+
+.attachment-link {
+    color: var(--color-accent-bright);
+    text-decoration: none;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    flex: 1;
+}
+
+.attachment-link:hover {
+    text-decoration: underline;
+}
+
+.attachment-delete {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: var(--font-xs);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.attachment-delete:hover {
+    border-color: var(--color-error);
+    color: var(--color-error);
+}
+
+.add-attachment-btn {
+    margin-top: 5px;
+    background: none;
+    border: 1px dashed var(--color-border);
+    color: var(--color-text-secondary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.add-attachment-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+/* Add Note button */
+.add-note-button {
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-note-button:hover {
+    background-color: var(--color-accent-bright);
+}
+
+.add-note-button:active {
+    transform: scale(0.95);
+}
+
+/* Note modal */
+.note-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1500;
+}
+
+.note-modal-overlay.show {
+    opacity: 1;
+}
+
+.note-modal {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 500px;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.2s ease;
+}
+
+.note-modal-overlay.show .note-modal {
+    transform: scale(1);
+}
+
+.note-modal-header {
+    font-size: var(--font-lg);
+    color: var(--color-text-primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.note-modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.note-modal-label {
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    margin-bottom: 5px;
+}
+
+.note-modal-input {
+    width: 100%;
+    padding: 8px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+}
+
+.note-modal-textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 8px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+    font-family: inherit;
+    resize: vertical;
+}
+
+.note-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.note-modal-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-modal-btn.save {
+    background-color: var(--color-accent);
+    color: white;
+}
+
+.note-modal-btn.save:hover {
+    background-color: var(--color-accent-bright);
+}
+
+.note-modal-btn.cancel {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.note-modal-btn.cancel:hover {
+    background-color: #3a3a3a;
 }
 
 /* Empty message styling */

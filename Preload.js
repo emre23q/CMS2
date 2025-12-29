@@ -85,5 +85,45 @@ contextBridge.exposeInMainWorld('api', {
      * @param {number} noteID - The note's ID
      * @returns {Promise<boolean>} True if successful
      */
-    deleteNote: (noteID) => ipcRenderer.invoke('delete-note', noteID)
+    deleteNote: (noteID) => ipcRenderer.invoke('delete-note', noteID),
+    
+    // Attachment Operations
+    
+    /**
+     * Get all attachments for a client (bulk load)
+     * @param {number} clientID - The client's ID
+     * @returns {Promise<Object>} Object with noteID as keys, array of filenames as values
+     */
+    getAttachments: (clientID) => ipcRenderer.invoke('get-attachments', clientID),
+    
+    /**
+     * Save an attachment file
+     * @param {number} clientID - The client's ID
+     * @param {number} noteID - The note's ID
+     * @param {string} fileName - The file name
+     * @param {ArrayBuffer} fileBuffer - The file data
+     * @returns {Promise<boolean>} True if successful
+     */
+    saveAttachment: (clientID, noteID, fileName, fileBuffer) => 
+        ipcRenderer.invoke('save-attachment', clientID, noteID, fileName, fileBuffer),
+    
+    /**
+     * Delete an attachment file
+     * @param {number} clientID - The client's ID
+     * @param {number} noteID - The note's ID
+     * @param {string} fileName - The file name
+     * @returns {Promise<boolean>} True if successful
+     */
+    deleteAttachment: (clientID, noteID, fileName) => 
+        ipcRenderer.invoke('delete-attachment', clientID, noteID, fileName),
+    
+    /**
+     * Open an attachment in default application
+     * @param {number} clientID - The client's ID
+     * @param {number} noteID - The note's ID
+     * @param {string} fileName - The file name
+     * @returns {Promise<boolean>} True if successful
+     */
+    openAttachment: (clientID, noteID, fileName) => 
+        ipcRenderer.invoke('open-attachment', clientID, noteID, fileName)
 });

@@ -173,8 +173,34 @@ ipcMain.handle('add-client', (event, clientData) => {
 
 ipcMain.handle('delete-client', (event, clientID) => {
     try {
+        // Delete client from database (CASCADE will delete all notes)
         db.run("DELETE FROM Client WHERE clientID = ?", [clientID]);
         saveDatabase();
+        
+        // Delete all attachments for this client
+        const appPath = app.getAppPath();
+        const clientAttachmentsDir = path.join(appPath, 'Database', 'Attachments', String(clientID));
+        
+        if (fs.existsSync(clientAttachmentsDir)) {
+            // Recursively delete the entire client attachments directory
+            const deleteRecursive = (dirPath) => {
+                if (fs.existsSync(dirPath)) {
+                    fs.readdirSync(dirPath).forEach(file => {
+                        const filePath = path.join(dirPath, file);
+                        if (fs.statSync(filePath).isDirectory()) {
+                            deleteRecursive(filePath);
+                        } else {
+                            fs.unlinkSync(filePath);
+                        }
+                    });
+                    fs.rmdirSync(dirPath);
+                }
+            };
+            
+            deleteRecursive(clientAttachmentsDir);
+            console.log('Deleted all attachments for client:', clientID);
+        }
+        
         return true;
     } catch (error) {
         console.error('Error deleting client:', error);
@@ -198,7 +224,6 @@ ipcMain.handle('update-client', (event, clientID, clientData) => {
         const values = [...columns.map(col => clientData[col]), clientID];
         const sql = `UPDATE Client SET ${setClause} WHERE clientID = ?`;
         db.run(sql, values);
-        console.log("running sql:", sql, values);
         saveDatabase();
         return true;
     
@@ -231,8 +256,34 @@ ipcMain.handle('add-note', (event,noteData) => {
 
 ipcMain.handle('delete-note', (event, noteID) => {
     try {
+        // First, get the clientID before deleting the note
+        const result = db.exec("SELECT clientID FROM History WHERE noteID = ?", [noteID]);
+        const clientID = result[0] && result[0].values[0] ? result[0].values[0][0] : null;
+        
+        // Delete the note from database
         db.run("DELETE FROM History WHERE noteID = ?", [noteID]);
         saveDatabase();
+        
+        // Delete attachments folder if it exists
+        if (clientID) {
+            const appPath = app.getAppPath();
+            const attachmentDir = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID));
+            
+            if (fs.existsSync(attachmentDir)) {
+                // Delete all files in the directory
+                const files = fs.readdirSync(attachmentDir);
+                files.forEach(file => {
+                    const filePath = path.join(attachmentDir, file);
+                    fs.unlinkSync(filePath);
+                });
+                
+                // Delete the directory itself
+                fs.rmdirSync(attachmentDir);
+                
+                console.log('Deleted attachments folder:', attachmentDir);
+            }
+        }
+        
         return true;
 
     } catch (error) {
@@ -292,25 +343,181 @@ ipcMain.handle('search-clients', (event, searchTerm) => {
         
         const pattern = `%${searchTerm}%`;
         
+        // Get all Client table columns dynamically
+        const schemaResult = db.exec("PRAGMA table_info(Client)");
+        const clientColumns = schemaResult[0].values.map(col => col[1]); // Get column names
+        
+        // Build WHERE clause for all client fields
+        const clientWhereConditions = clientColumns.map(col => `c.${col} LIKE ?`).join(' OR ');
+        
+        // Build SQL with dynamic client fields + notes + attachments
         const sql = `
             SELECT DISTINCT c.clientID, c.firstName, c.lastName
             FROM Client c
             LEFT JOIN History h ON c.clientID = h.clientID
-            WHERE c.firstName LIKE ?
-               OR c.lastName LIKE ?
-               OR c.email LIKE ?
-               OR c.phone LIKE ?
-               OR c.address LIKE ?
+            WHERE ${clientWhereConditions}
                OR h.noteType LIKE ?
                OR h.content LIKE ?
             ORDER BY c.lastName, c.firstName
         `;
         
-        const result = db.exec(sql, [pattern, pattern, pattern, pattern, pattern, pattern, pattern]);
-        return mapDbResult(result);
+        // Create parameter array: one for each client column + 2 for notes
+        const params = [...clientColumns.map(() => pattern), pattern, pattern];
+        
+        const result = db.exec(sql, params);
+        let clients = mapDbResult(result);
+        
+        // Also search attachment filenames
+        const appPath = app.getAppPath();
+        const attachmentsPath = path.join(appPath, 'Database', 'Attachments');
+        
+        if (fs.existsSync(attachmentsPath)) {
+            const clientDirs = fs.readdirSync(attachmentsPath);
+            
+            clientDirs.forEach(clientID => {
+                const clientPath = path.join(attachmentsPath, clientID);
+                if (fs.statSync(clientPath).isDirectory()) {
+                    const noteDirs = fs.readdirSync(clientPath);
+                    
+                    noteDirs.forEach(noteID => {
+                        const notePath = path.join(clientPath, noteID);
+                        if (fs.statSync(notePath).isDirectory()) {
+                            const files = fs.readdirSync(notePath);
+                            
+                            // Check if any filename matches search term
+                            const hasMatch = files.some(file => 
+                                file.toLowerCase().includes(searchTerm.toLowerCase())
+                            );
+                            
+                            if (hasMatch) {
+                                // Get client info
+                                const clientResult = db.exec(
+                                    "SELECT clientID, firstName, lastName FROM Client WHERE clientID = ?",
+                                    [parseInt(clientID)]
+                                );
+                                const client = mapDbResult(clientResult)[0];
+                                
+                                // Add to results if not already there
+                                if (client && !clients.some(c => c.clientID === client.clientID)) {
+                                    clients.push(client);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Re-sort after adding attachment matches
+            clients.sort((a, b) => {
+                const lastNameCompare = a.lastName.localeCompare(b.lastName);
+                if (lastNameCompare !== 0) return lastNameCompare;
+                return a.firstName.localeCompare(b.firstName);
+            });
+        }
+        
+        return clients;
         
     } catch (error) {
         console.error('Error searching clients:', error);
         throw new Error('Failed to search clients: ' + error.message);
+    }
+});
+
+// Attachment Operations
+const { shell } = require('electron');
+
+ipcMain.handle('get-attachments', (event, clientID) => {
+    try {
+        const appPath = app.getAppPath();
+        const clientAttachmentsPath = path.join(appPath, 'Database', 'Attachments', String(clientID));
+        
+        // Check if client attachments directory exists
+        if (!fs.existsSync(clientAttachmentsPath)) {
+            return {}; // No attachments for this client
+        }
+        
+        const attachments = {};
+        
+        // Read all note directories for this client
+        const noteDirs = fs.readdirSync(clientAttachmentsPath);
+        
+        noteDirs.forEach(noteID => {
+            const notePath = path.join(clientAttachmentsPath, noteID);
+            
+            // Check if it's a directory
+            if (fs.statSync(notePath).isDirectory()) {
+                const files = fs.readdirSync(notePath);
+                attachments[noteID] = files;
+            }
+        });
+        
+        console.log('Loaded attachments for client:', clientID, attachments);
+        return attachments;
+        
+    } catch (error) {
+        console.error('Error getting attachments:', error);
+        throw new Error('Failed to get attachments: ' + error.message);
+    }
+});
+
+ipcMain.handle('save-attachment', (event, clientID, noteID, fileName, fileBuffer) => {
+    try {
+        const appPath = app.getAppPath();
+        const attachmentDir = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID));
+        
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(attachmentDir)) {
+            fs.mkdirSync(attachmentDir, { recursive: true });
+        }
+        
+        const filePath = path.join(attachmentDir, fileName);
+        
+        // Write file
+        fs.writeFileSync(filePath, Buffer.from(fileBuffer));
+        
+        console.log('Saved attachment:', filePath);
+        return true;
+        
+    } catch (error) {
+        console.error('Error saving attachment:', error);
+        throw new Error('Failed to save attachment: ' + error.message);
+    }
+});
+
+ipcMain.handle('delete-attachment', (event, clientID, noteID, fileName) => {
+    try {
+        const appPath = app.getAppPath();
+        const filePath = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID), fileName);
+        
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log('Deleted attachment:', filePath);
+            return true;
+        }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('Error deleting attachment:', error);
+        throw new Error('Failed to delete attachment: ' + error.message);
+    }
+});
+
+ipcMain.handle('open-attachment', async (event, clientID, noteID, fileName) => {
+    try {
+        const appPath = app.getAppPath();
+        const filePath = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID), fileName);
+        
+        if (fs.existsSync(filePath)) {
+            await shell.openPath(filePath);
+            console.log('Opened attachment:', filePath);
+            return true;
+        }
+        
+        throw new Error('File not found');
+        
+    } catch (error) {
+        console.error('Error opening attachment:', error);
+        throw new Error('Failed to open attachment: ' + error.message);
     }
 });
