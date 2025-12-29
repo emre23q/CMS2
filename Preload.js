@@ -125,5 +125,39 @@ contextBridge.exposeInMainWorld('api', {
      * @returns {Promise<boolean>} True if successful
      */
     openAttachment: (clientID, noteID, fileName) => 
-        ipcRenderer.invoke('open-attachment', clientID, noteID, fileName)
+        ipcRenderer.invoke('open-attachment', clientID, noteID, fileName),
+    
+    // Field Management
+    
+    /**
+     * Get all field metadata
+     * @returns {Promise<Array>} Array of field metadata objects
+     */
+    getFieldMetadata: () => ipcRenderer.invoke('get-field-metadata'),
+    
+    /**
+     * Add a new field to the Client table
+     * @param {string} fieldName - The field name
+     * @param {string} dataType - The data type ('TEXT' or 'DATE')
+     * @param {boolean} isRequired - Whether the field is required
+     * @param {string} defaultValue - Default value for existing clients
+     * @returns {Promise<boolean>} True if successful
+     */
+    addField: (fieldName, dataType, isRequired, defaultValue) => 
+        ipcRenderer.invoke('add-field', fieldName, dataType, isRequired, defaultValue),
+    
+    /**
+     * Toggle field visibility (hide/show)
+     * @param {string} fieldName - The field name
+     * @param {boolean} isHidden - Whether to hide the field
+     * @returns {Promise<boolean>} True if successful
+     */
+    toggleFieldVisibility: (fieldName, isHidden) => 
+        ipcRenderer.invoke('toggle-field-visibility', fieldName, isHidden),
+    
+    /**
+     * Restart the application
+     * @returns {Promise<void>}
+     */
+    restartApp: () => ipcRenderer.invoke('restart-app')
 });

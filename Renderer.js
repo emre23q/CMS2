@@ -9,6 +9,7 @@ let clientSchema = null;
 let clientAttachments = {}; // Cache for attachments: { noteID: [files...] }
 let isSearchMode = false;
 let currentSearchTerm = '';
+let fieldMetadata = []; // Cache for field metadata
 
 // Load and display all clients
 async function loadClientList() {
@@ -252,6 +253,473 @@ function initializeSearch() {
     }
 }
 
+/**
+ * Show field management modal
+ */
+async function showFieldManagementModal() {
+    try {
+        // Reload field metadata to get latest state
+        await getFieldMetadata();
+        
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'field-modal-overlay';
+        overlay.id = 'field-modal-overlay';
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'field-modal';
+        
+        const header = document.createElement('div');
+        header.className = 'field-modal-header';
+        header.textContent = 'Manage Client Fields';
+        
+        // Current Fields Section
+        const currentFieldsSection = document.createElement('div');
+        currentFieldsSection.className = 'field-modal-section';
+        
+        const currentFieldsTitle = document.createElement('div');
+        currentFieldsTitle.className = 'field-modal-section-title';
+        currentFieldsTitle.textContent = 'Current Fields';
+        
+        const fieldList = document.createElement('div');
+        fieldList.className = 'field-list';
+        fieldList.id = 'field-list';
+        
+        // Populate field list
+        fieldMetadata.forEach(field => {
+            const item = document.createElement('div');
+            item.className = 'field-list-item';
+            if (field.isHidden === 1) item.classList.add('hidden');
+            
+            const left = document.createElement('div');
+            left.className = 'field-list-item-left';
+            
+            const icon = document.createElement('span');
+            icon.className = 'field-list-item-icon';
+            icon.textContent = field.isHidden === 1 ? '⚫' : '✓';
+            
+            const info = document.createElement('div');
+            info.className = 'field-list-item-info';
+            
+            const name = document.createElement('div');
+            name.className = 'field-list-item-name';
+            name.textContent = formatFieldName(field.fieldName);
+            
+            const meta = document.createElement('div');
+            meta.className = 'field-list-item-meta';
+            const parts = [];
+            parts.push(field.dataType);
+            if (field.isRequired === 1) parts.push('Required');
+            if (field.isProtected === 1) parts.push('Protected');
+            meta.textContent = parts.join(' • ');
+            
+            info.appendChild(name);
+            info.appendChild(meta);
+            
+            left.appendChild(icon);
+            left.appendChild(info);
+            
+            // Hide/Show button
+            const button = document.createElement('button');
+            button.className = 'field-list-item-btn';
+            
+            if (field.isProtected === 1) {
+                button.textContent = 'Protected';
+                button.classList.add('protected');
+            } else {
+                button.textContent = field.isHidden === 1 ? 'Show' : 'Hide';
+                button.addEventListener('click', async () => {
+                    await toggleFieldVisibility(field.fieldName, field.isHidden === 0);
+                    showRestartPrompt();
+                });
+            }
+            
+            item.appendChild(left);
+            item.appendChild(button);
+            fieldList.appendChild(item);
+        });
+        
+        currentFieldsSection.appendChild(currentFieldsTitle);
+        currentFieldsSection.appendChild(fieldList);
+        
+        // Add New Field Section
+        const addFieldSection = document.createElement('div');
+        addFieldSection.className = 'field-modal-section';
+        
+        const addFieldTitle = document.createElement('div');
+        addFieldTitle.className = 'field-modal-section-title';
+        addFieldTitle.textContent = 'Add New Field';
+        
+        const addFieldForm = document.createElement('div');
+        addFieldForm.className = 'add-field-form';
+        
+        // Field Name
+        const nameRow = document.createElement('div');
+        nameRow.className = 'add-field-row';
+        const nameLabel = document.createElement('label');
+        nameLabel.className = 'add-field-label';
+        nameLabel.textContent = 'Field Name:';
+        const nameInput = document.createElement('input');
+        nameInput.className = 'add-field-input';
+        nameInput.id = 'new-field-name';
+        nameInput.placeholder = 'e.g., allergies';
+        nameRow.appendChild(nameLabel);
+        nameRow.appendChild(nameInput);
+        
+        // Data Type
+        const typeRow = document.createElement('div');
+        typeRow.className = 'add-field-row';
+        const typeLabel = document.createElement('label');
+        typeLabel.className = 'add-field-label';
+        typeLabel.textContent = 'Data Type:';
+        const typeRadios = document.createElement('div');
+        typeRadios.className = 'add-field-radio-group';
+        
+        const textRadio = document.createElement('label');
+        textRadio.className = 'add-field-radio-label';
+        const textInput = document.createElement('input');
+        textInput.type = 'radio';
+        textInput.name = 'field-type';
+        textInput.value = 'TEXT';
+        textInput.checked = true;
+        textRadio.appendChild(textInput);
+        textRadio.appendChild(document.createTextNode(' Text'));
+        
+        const dateRadio = document.createElement('label');
+        dateRadio.className = 'add-field-radio-label';
+        const dateInput = document.createElement('input');
+        dateInput.type = 'radio';
+        dateInput.name = 'field-type';
+        dateInput.value = 'DATE';
+        dateRadio.appendChild(dateInput);
+        dateRadio.appendChild(document.createTextNode(' Date'));
+        
+        typeRadios.appendChild(textRadio);
+        typeRadios.appendChild(dateRadio);
+        typeRow.appendChild(typeLabel);
+        typeRow.appendChild(typeRadios);
+        
+        // Required checkbox
+        const requiredRow = document.createElement('div');
+        requiredRow.className = 'add-field-row';
+        const requiredLabel = document.createElement('label');
+        requiredLabel.className = 'add-field-radio-label';
+        const requiredCheckbox = document.createElement('input');
+        requiredCheckbox.type = 'checkbox';
+        requiredCheckbox.id = 'new-field-required';
+        requiredCheckbox.className = 'add-field-checkbox';
+        requiredLabel.appendChild(requiredCheckbox);
+        requiredLabel.appendChild(document.createTextNode(' Required'));
+        requiredRow.appendChild(document.createElement('label')); // Empty label for alignment
+        requiredRow.appendChild(requiredLabel);
+        
+        // Default Value (shown when Required is checked)
+        const defaultRow = document.createElement('div');
+        defaultRow.className = 'add-field-row';
+        defaultRow.style.display = 'none';
+        const defaultLabel = document.createElement('label');
+        defaultLabel.className = 'add-field-label';
+        defaultLabel.textContent = 'Default:';
+        const defaultInput = document.createElement('input');
+        defaultInput.className = 'add-field-input';
+        defaultInput.id = 'new-field-default';
+        defaultInput.placeholder = 'Default value for existing clients';
+        defaultRow.appendChild(defaultLabel);
+        defaultRow.appendChild(defaultInput);
+        
+        // Update placeholder based on data type
+        const updateDefaultPlaceholder = () => {
+            const selectedType = typeRadios.querySelector('input[name="field-type"]:checked').value;
+            if (selectedType === 'DATE') {
+                defaultInput.placeholder = 'DD/MM/YYYY (e.g., 01/01/2024)';
+            } else {
+                defaultInput.placeholder = 'Default value for existing clients';
+            }
+        };
+        
+        // Listen for data type changes
+        textInput.addEventListener('change', updateDefaultPlaceholder);
+        dateInput.addEventListener('change', updateDefaultPlaceholder);
+        
+        // Show/hide default field based on required checkbox
+        requiredCheckbox.addEventListener('change', () => {
+            defaultRow.style.display = requiredCheckbox.checked ? 'flex' : 'none';
+            if (requiredCheckbox.checked) {
+                updateDefaultPlaceholder();
+            }
+        });
+        
+        // Add Field button
+        const addFieldActions = document.createElement('div');
+        addFieldActions.className = 'add-field-actions';
+        const addFieldBtn = document.createElement('button');
+        addFieldBtn.className = 'add-field-btn add';
+        addFieldBtn.textContent = 'Add Field';
+        addFieldBtn.addEventListener('click', async () => {
+            await handleAddField(nameInput.value, typeRadios, requiredCheckbox.checked, defaultInput.value);
+        });
+        addFieldActions.appendChild(addFieldBtn);
+        
+        addFieldForm.appendChild(nameRow);
+        addFieldForm.appendChild(typeRow);
+        addFieldForm.appendChild(requiredRow);
+        addFieldForm.appendChild(defaultRow);
+        addFieldForm.appendChild(addFieldActions);
+        
+        addFieldSection.appendChild(addFieldTitle);
+        addFieldSection.appendChild(addFieldForm);
+        
+        // Modal Actions
+        const actions = document.createElement('div');
+        actions.className = 'field-modal-actions';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'field-modal-close';
+        closeBtn.textContent = 'Close';
+        closeBtn.addEventListener('click', closeFieldManagementModal);
+        
+        actions.appendChild(closeBtn);
+        
+        modal.appendChild(header);
+        modal.appendChild(currentFieldsSection);
+        modal.appendChild(addFieldSection);
+        modal.appendChild(actions);
+        overlay.appendChild(modal);
+        
+        document.body.appendChild(overlay);
+        
+        // Trigger animation
+        setTimeout(() => {
+            overlay.classList.add('show');
+        }, 10);
+        
+    } catch (error) {
+        console.error('Error showing field management modal:', error);
+        showToast('Failed to load field management', 'error');
+    }
+}
+
+/**
+ * Close field management modal
+ */
+function closeFieldManagementModal() {
+    const overlay = document.getElementById('field-modal-overlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => {
+            overlay.remove();
+        }, 200);
+    }
+}
+
+/**
+ * Handle adding a new field
+ */
+async function handleAddField(fieldName, typeRadios, isRequired, defaultValue) {
+    // Validate field name
+    if (!fieldName || fieldName.trim() === '') {
+        showToast('Please enter a field name', 'error');
+        return;
+    }
+    
+    // Get selected data type
+    const dataType = typeRadios.querySelector('input[name="field-type"]:checked').value;
+    
+    // Validate required field has default
+    if (isRequired && (!defaultValue || defaultValue.trim() === '')) {
+        showToast('Required fields must have a default value', 'error');
+        return;
+    }
+    
+    try {
+        await window.api.addField(fieldName.trim(), dataType, isRequired, defaultValue.trim());
+        
+        showToast('Field added successfully', 'success');
+        
+        // Close modal
+        closeFieldManagementModal();
+        
+        // Show restart prompt
+        showRestartPrompt();
+        
+    } catch (error) {
+        console.error('Error adding field:', error);
+        showToast(`Failed to add field: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Toggle field visibility
+ */
+async function toggleFieldVisibility(fieldName, isHidden) {
+    try {
+        await window.api.toggleFieldVisibility(fieldName, isHidden);
+        
+        // Update local cache
+        const field = fieldMetadata.find(f => f.fieldName === fieldName);
+        if (field) {
+            field.isHidden = isHidden ? 1 : 0;
+        }
+        
+        // Preserve scroll position
+        const modal = document.querySelector('.field-modal');
+        const scrollPosition = modal ? modal.scrollTop : 0;
+        
+        // Refresh the field list
+        await refreshFieldList();
+        
+        // Restore scroll position
+        const newModal = document.querySelector('.field-modal');
+        if (newModal) {
+            newModal.scrollTop = scrollPosition;
+        }
+        
+        showToast(`Field ${isHidden ? 'hidden' : 'shown'} successfully`, 'success');
+        
+    } catch (error) {
+        console.error('Error toggling field visibility:', error);
+        showToast(`Failed to toggle field visibility: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Refresh field list without recreating entire modal
+ */
+async function refreshFieldList() {
+    const fieldList = document.getElementById('field-list');
+    if (!fieldList) return;
+    
+    // Clear existing list
+    fieldList.innerHTML = '';
+    
+    // Reload field metadata
+    await getFieldMetadata();
+    
+    // Rebuild field list
+    fieldMetadata.forEach(field => {
+        const item = document.createElement('div');
+        item.className = 'field-list-item';
+        if (field.isHidden === 1) item.classList.add('hidden');
+        
+        const left = document.createElement('div');
+        left.className = 'field-list-item-left';
+        
+        const icon = document.createElement('span');
+        icon.className = 'field-list-item-icon';
+        icon.textContent = field.isHidden === 1 ? '⚫' : '✓';
+        
+        const info = document.createElement('div');
+        info.className = 'field-list-item-info';
+        
+        const name = document.createElement('div');
+        name.className = 'field-list-item-name';
+        name.textContent = formatFieldName(field.fieldName);
+        
+        const meta = document.createElement('div');
+        meta.className = 'field-list-item-meta';
+        const parts = [];
+        parts.push(field.dataType);
+        if (field.isRequired === 1) parts.push('Required');
+        if (field.isProtected === 1) parts.push('Protected');
+        meta.textContent = parts.join(' • ');
+        
+        info.appendChild(name);
+        info.appendChild(meta);
+        
+        left.appendChild(icon);
+        left.appendChild(info);
+        
+        // Hide/Show button
+        const button = document.createElement('button');
+        button.className = 'field-list-item-btn';
+        
+        if (field.isProtected === 1) {
+            button.textContent = 'Protected';
+            button.classList.add('protected');
+        } else {
+            button.textContent = field.isHidden === 1 ? 'Show' : 'Hide';
+            button.addEventListener('click', async () => {
+                await toggleFieldVisibility(field.fieldName, field.isHidden === 0);
+                showRestartPrompt();
+            });
+        }
+        
+        item.appendChild(left);
+        item.appendChild(button);
+        fieldList.appendChild(item);
+    });
+}
+
+/**
+ * Show restart prompt
+ */
+function showRestartPrompt() {
+    // Remove existing prompt if any
+    const existing = document.getElementById('restart-prompt-overlay');
+    if (existing) existing.remove();
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'restart-prompt-overlay';
+    overlay.id = 'restart-prompt-overlay';
+    
+    // Create prompt
+    const prompt = document.createElement('div');
+    prompt.className = 'restart-prompt';
+    
+    const title = document.createElement('div');
+    title.className = 'restart-prompt-title';
+    title.textContent = 'Schema Changed - Restart Required';
+    
+    const message = document.createElement('div');
+    message.className = 'restart-prompt-message';
+    message.textContent = 'The application needs to restart to apply database changes.';
+    
+    const actions = document.createElement('div');
+    actions.className = 'restart-prompt-actions';
+    
+    const nowBtn = document.createElement('button');
+    nowBtn.className = 'restart-prompt-btn now';
+    nowBtn.textContent = 'Restart Now';
+    nowBtn.addEventListener('click', async () => {
+        await window.api.restartApp();
+    });
+    
+    const laterBtn = document.createElement('button');
+    laterBtn.className = 'restart-prompt-btn later';
+    laterBtn.textContent = 'Later';
+    laterBtn.addEventListener('click', () => {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 200);
+    });
+    
+    actions.appendChild(nowBtn);
+    actions.appendChild(laterBtn);
+    
+    prompt.appendChild(title);
+    prompt.appendChild(message);
+    prompt.appendChild(actions);
+    overlay.appendChild(prompt);
+    
+    document.body.appendChild(overlay);
+    
+    // Trigger animation
+    setTimeout(() => {
+        overlay.classList.add('show');
+    }, 10);
+}
+
+/**
+ * Initialize field management button
+ */
+function initializeManageFieldsButton() {
+    const manageFieldsButton = document.getElementById('manage-fields-button');
+    if (manageFieldsButton) {
+        manageFieldsButton.addEventListener('click', showFieldManagementModal);
+    }
+}
+
 // Handle client click
 async function handleClientClick(clientID) {
     console.log('Client clicked:', clientID);
@@ -273,6 +741,95 @@ async function handleClientClick(clientID) {
     // Load client details and notes
     await loadClientDetails(clientID);
     await loadClientNotes(clientID);
+    
+    // Update header with client name and delete button
+    await updateClientDetailsHeader(clientID);
+}
+
+/**
+ * Update client details header with name and delete button
+ */
+async function updateClientDetailsHeader(clientID) {
+    // Remove delete buttons from all list items
+    document.querySelectorAll('.client-delete-btn').forEach(btn => btn.remove());
+    
+    if (!clientID) {
+        return;
+    }
+    
+    try {
+        // Add delete button to the active list item
+        const activeItem = document.querySelector('.client-list li.active');
+        if (!activeItem) return;
+        
+        // Check if button already exists
+        if (activeItem.querySelector('.client-delete-btn')) return;
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'client-delete-btn';
+        deleteBtn.textContent = '×';
+        deleteBtn.title = 'Delete Client';
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering client click
+            handleDeleteClient(clientID);
+        });
+        
+        activeItem.appendChild(deleteBtn);
+        
+    } catch (error) {
+        console.error('Error updating client header:', error);
+    }
+}
+
+/**
+ * Handle delete client
+ */
+async function handleDeleteClient(clientID) {
+    try {
+        // Get client name for confirmation
+        const client = await window.api.getClient(clientID);
+        if (!client) return;
+        
+        const confirmed = await showDeleteConfirmation(
+            `Delete ${client.firstName} ${client.lastName}? This will delete all notes and attachments.`
+        );
+        
+        if (!confirmed) return;
+        
+        // Delete client
+        await window.api.deleteClient(clientID);
+        
+        // Clear details
+        currentClientID = null;
+        const detailsGrid = document.getElementById('client-details-grid');
+        detailsGrid.innerHTML = '<p class="empty-message">Select a client to view details</p>';
+        
+        const notesContainer = document.querySelector('.pane-notes .pane-content');
+        notesContainer.innerHTML = '<p class="empty-message">Select a client to view notes</p>';
+        
+        // Reload client list
+        await loadClientList();
+        
+        showToast('Client deleted successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error deleting client:', error);
+        showToast(`Failed to delete client: ${error.message}`, 'error');
+    }
+}
+
+/**
+ * Get and cache field metadata
+ */
+async function getFieldMetadata() {
+    try {
+        fieldMetadata = await window.api.getFieldMetadata();
+        console.log('Loaded field metadata:', fieldMetadata);
+        return fieldMetadata;
+    } catch (error) {
+        console.error('Error loading field metadata:', error);
+        return [];
+    }
 }
 
 /**
@@ -293,11 +850,17 @@ async function loadClientDetails(clientID) {
             return;
         }
         
+        // Get hidden fields
+        const hiddenFields = fieldMetadata.filter(f => f.isHidden === 1).map(f => f.fieldName);
+        
         // Clear existing content
         detailsGrid.innerHTML = '';
         
-        // Loop through each key-value pair
+        // Loop through each key-value pair, excluding hidden fields
         Object.entries(client).forEach(([key, value]) => {
+            // Skip hidden fields
+            if (hiddenFields.includes(key)) return;
+            
             // Create detail item
             const detailItem = document.createElement('div');
             detailItem.className = 'detail-item';
@@ -552,6 +1115,12 @@ async function enterAddMode() {
     const schema = await getClientSchema();
     if (!schema) return;
     
+    // Get hidden fields
+    const hiddenFields = fieldMetadata.filter(f => f.isHidden === 1).map(f => f.fieldName);
+    
+    // Filter out hidden fields from schema
+    const visibleSchema = schema.filter(field => !hiddenFields.includes(field.name));
+    
     // Clear current client selection
     currentClientID = null;
     document.querySelectorAll('.client-list li').forEach(li => {
@@ -569,7 +1138,7 @@ async function enterAddMode() {
     // Get today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
     
-    schema.forEach(field => {
+    visibleSchema.forEach(field => {
         const detailItem = document.createElement('div');
         detailItem.className = 'detail-item';
         
@@ -1066,23 +1635,11 @@ function validateField(fieldName, value) {
         }
     }
     
-    // Validate DOB
-    if (fieldName === 'dob') {
-        const parsedDate = parseDateInput(trimmedValue);
-        if (!parsedDate) {
-            return {
-                valid: false,
-                error: 'Invalid date format. Please use DD/MM/YYYY'
-            };
-        }
-        return {
-            valid: true,
-            value: parsedDate
-        };
-    }
+    // Get field metadata to check if it's a DATE field
+    const fieldMeta = fieldMetadata.find(f => f.fieldName === fieldName);
     
-    // Validate clientSince (same as DOB)
-    if (fieldName === 'clientSince') {
+    // Validate all DATE fields (DOB, clientSince, and any custom DATE fields)
+    if (fieldMeta && fieldMeta.dataType === 'DATE') {
         const parsedDate = parseDateInput(trimmedValue);
         if (!parsedDate) {
             return {
@@ -1687,11 +2244,13 @@ function initializeAddNoteButton() {
 
 // Run when page loads
 document.addEventListener('DOMContentLoaded', async () => {
-    // Load schema first for validation
+    // Load schema and field metadata first for validation
     await getClientSchema();
+    await getFieldMetadata();
     // Then load client list
     await loadClientList();
     initializeAddButton();
     initializeAddNoteButton();
     initializeSearch();
+    initializeManageFieldsButton();
 });

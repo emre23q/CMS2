@@ -58,7 +58,9 @@ async function initDatabase(){
         fs.writeFileSync(dbPath, buffer);
         console.log('New database created and initialized.', dbPath);
     }
-
+    
+    // Initialize FieldMetadata table if it doesn't exist
+    initFieldMetadata();
 }
 
 function saveDatabase(){
@@ -71,6 +73,56 @@ function saveDatabase(){
         fs.writeFileSync(dbPath, buffer);
         console.log('Database saved to file.', dbPath);
 
+    }
+}
+
+function initFieldMetadata() {
+    try {
+        // Create FieldMetadata table if it doesn't exist
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS FieldMetadata (
+                fieldName TEXT PRIMARY KEY,
+                dataType TEXT,
+                isRequired INTEGER,
+                isHidden INTEGER DEFAULT 0,
+                isProtected INTEGER DEFAULT 0
+            )
+        `);
+        
+        // Check if we need to populate it
+        const result = db.exec("SELECT COUNT(*) as count FROM FieldMetadata");
+        const count = result[0].values[0][0];
+        
+        if (count === 0) {
+            // Get current Client table schema
+            const schemaResult = db.exec("PRAGMA table_info(Client)");
+            
+            schemaResult[0].values.forEach(col => {
+                const fieldName = col[1];
+                const dataType = col[2];
+                const isRequired = col[3];
+                
+                // Determine if protected (firstName, lastName, clientID)
+                const isProtected = (fieldName === 'firstName' || fieldName === 'lastName' || fieldName === 'clientID') ? 1 : 0;
+                
+                // Map SQL types to our simple types
+                let simpleType = 'TEXT';
+                if (dataType.includes('DATE')) {
+                    simpleType = 'DATE';
+                }
+                
+                db.run(
+                    "INSERT INTO FieldMetadata (fieldName, dataType, isRequired, isHidden, isProtected) VALUES (?, ?, ?, 0, ?)",
+                    [fieldName, simpleType, isRequired, isProtected]
+                );
+            });
+            
+            saveDatabase();
+            console.log('FieldMetadata table initialized');
+        }
+        
+    } catch (error) {
+        console.error('Error initializing FieldMetadata:', error);
     }
 }
 
@@ -343,12 +395,19 @@ ipcMain.handle('search-clients', (event, searchTerm) => {
         
         const pattern = `%${searchTerm}%`;
         
-        // Get all Client table columns dynamically
+        // Get non-hidden Client table columns dynamically
         const schemaResult = db.exec("PRAGMA table_info(Client)");
-        const clientColumns = schemaResult[0].values.map(col => col[1]); // Get column names
+        const allColumns = schemaResult[0].values.map(col => col[1]);
         
-        // Build WHERE clause for all client fields
-        const clientWhereConditions = clientColumns.map(col => `c.${col} LIKE ?`).join(' OR ');
+        // Get hidden fields
+        const hiddenResult = db.exec("SELECT fieldName FROM FieldMetadata WHERE isHidden = 1");
+        const hiddenFields = hiddenResult[0] ? hiddenResult[0].values.map(row => row[0]) : [];
+        
+        // Filter out hidden fields
+        const visibleColumns = allColumns.filter(col => !hiddenFields.includes(col));
+        
+        // Build WHERE clause for visible client fields only
+        const clientWhereConditions = visibleColumns.map(col => `c.${col} LIKE ?`).join(' OR ');
         
         // Build SQL with dynamic client fields + notes + attachments
         const sql = `
@@ -361,8 +420,8 @@ ipcMain.handle('search-clients', (event, searchTerm) => {
             ORDER BY c.lastName, c.firstName
         `;
         
-        // Create parameter array: one for each client column + 2 for notes
-        const params = [...clientColumns.map(() => pattern), pattern, pattern];
+        // Create parameter array: one for each visible column + 2 for notes
+        const params = [...visibleColumns.map(() => pattern), pattern, pattern];
         
         const result = db.exec(sql, params);
         let clients = mapDbResult(result);
@@ -520,4 +579,128 @@ ipcMain.handle('open-attachment', async (event, clientID, noteID, fileName) => {
         console.error('Error opening attachment:', error);
         throw new Error('Failed to open attachment: ' + error.message);
     }
+});
+
+// Field Management Operations
+
+ipcMain.handle('get-field-metadata', () => {
+    try {
+        const result = db.exec("SELECT * FROM FieldMetadata ORDER BY isProtected DESC, fieldName ASC");
+        return mapDbResult(result);
+    } catch (error) {
+        console.error('Error getting field metadata:', error);
+        throw new Error('Failed to get field metadata: ' + error.message);
+    }
+});
+
+ipcMain.handle('add-field', (event, fieldName, dataType, isRequired, defaultValue) => {
+    try {
+        // Validate field name (alphanumeric and underscore only)
+        if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)) {
+            throw new Error('Field name must start with a letter and contain only letters, numbers, and underscores');
+        }
+        
+        // Check if field already exists
+        const schemaResult = db.exec("PRAGMA table_info(Client)");
+        const existingFields = schemaResult[0].values.map(col => col[1]);
+        
+        if (existingFields.includes(fieldName)) {
+            throw new Error('Field already exists');
+        }
+        
+        // Validate and format default value for DATE fields
+        let processedDefault = defaultValue;
+        if (dataType === 'DATE' && defaultValue && defaultValue.trim() !== '') {
+            // Parse DD/MM/YYYY to YYYY-MM-DD
+            const parsed = parseDateInputBackend(defaultValue.trim());
+            if (!parsed) {
+                throw new Error('Invalid date format for default value. Please use DD/MM/YYYY');
+            }
+            processedDefault = parsed;
+        }
+        
+        // Build ALTER TABLE statement
+        let sqlType = dataType === 'DATE' ? 'DATE' : 'TEXT';
+        let alterSQL = `ALTER TABLE Client ADD COLUMN ${fieldName} ${sqlType}`;
+        
+        if (isRequired) {
+            if (!processedDefault || processedDefault.trim() === '') {
+                throw new Error('Required fields must have a default value');
+            }
+            alterSQL += ` NOT NULL DEFAULT '${processedDefault.replace(/'/g, "''")}'`;
+        }
+        
+        // Add column to Client table
+        db.run(alterSQL);
+        
+        // Add to FieldMetadata
+        db.run(
+            "INSERT INTO FieldMetadata (fieldName, dataType, isRequired, isHidden, isProtected) VALUES (?, ?, ?, 0, 0)",
+            [fieldName, dataType, isRequired ? 1 : 0]
+        );
+        
+        saveDatabase();
+        
+        console.log('Added field:', fieldName);
+        return true;
+        
+    } catch (error) {
+        console.error('Error adding field:', error);
+        throw new Error('Failed to add field: ' + error.message);
+    }
+});
+
+// Helper function to parse DD/MM/YYYY dates in backend
+function parseDateInputBackend(inputString) {
+    if (!inputString || inputString.trim() === '') return null;
+    
+    // Remove extra whitespace
+    const cleaned = inputString.trim();
+    
+    // Try to parse DD/MM/YYYY format
+    const parts = cleaned.split(/[\/\-\.\s]/);
+    
+    if (parts.length !== 3) return null;
+    
+    let day = parseInt(parts[0], 10);
+    let month = parseInt(parts[1], 10);
+    let year = parseInt(parts[2], 10);
+    
+    // Validate ranges
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    if (day < 1 || day > 31) return null;
+    if (month < 1 || month > 12) return null;
+    if (year < 1900 || year > 2100) return null;
+    
+    // Pad to 2 digits
+    const dayStr = String(day).padStart(2, '0');
+    const monthStr = String(month).padStart(2, '0');
+    
+    // Check if date is valid
+    const testDate = new Date(year, month - 1, day);
+    if (testDate.getDate() !== day || testDate.getMonth() !== month - 1) {
+        return null; // Invalid date (e.g., Feb 30)
+    }
+    
+    // Return in YYYY-MM-DD format
+    return `${year}-${monthStr}-${dayStr}`;
+}
+
+ipcMain.handle('toggle-field-visibility', (event, fieldName, isHidden) => {
+    try {
+        db.run("UPDATE FieldMetadata SET isHidden = ? WHERE fieldName = ?", [isHidden ? 1 : 0, fieldName]);
+        saveDatabase();
+        
+        console.log(`${isHidden ? 'Hidden' : 'Shown'} field:`, fieldName);
+        return true;
+        
+    } catch (error) {
+        console.error('Error toggling field visibility:', error);
+        throw new Error('Failed to toggle field visibility: ' + error.message);
+    }
+});
+
+ipcMain.handle('restart-app', () => {
+    app.relaunch();
+    app.exit(0);
 });

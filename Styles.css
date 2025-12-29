@@ -10,7 +10,7 @@
    ============================================ */
 :root {
     /* Font Scale - Adjust this one number to change all text sizes */
-    --font-scale: 1.20;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
+    --font-scale: 1.5;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
     
     /* Base font sizes (scaled automatically) */
     --font-xs: calc(11px * var(--font-scale));   /* Small labels */
@@ -350,10 +350,11 @@ body {
 /* Individual client item (li) */
 .client-list li {
     background-color: var(--color-bg-tertiary);
-    padding: 12px 16px;
+    padding: 12px 40px 12px 16px; /* Right padding for delete button */
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
+    position: relative;
 }
 
 /* Client item hover */
@@ -617,6 +618,60 @@ body {
     transform: scale(0.95);
 }
 
+/* Manage Fields button */
+.manage-fields-button {
+    background-color: var(--color-accent);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: var(--font-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.manage-fields-button:hover {
+    background-color: var(--color-accent-bright);
+}
+
+.manage-fields-button:active {
+    transform: scale(0.95);
+}
+
+/* Client delete button in list item */
+.client-delete-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--color-bg-tertiary);
+    color: white;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.client-delete-btn:hover {
+    background-color: #d32f2f;
+    transform: translateY(-50%) scale(1.05);
+}
+
+.client-delete-btn:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
 /* Note modal */
 .note-modal-overlay {
     position: fixed;
@@ -726,6 +781,311 @@ body {
 }
 
 .note-modal-btn.cancel:hover {
+    background-color: #3a3a3a;
+}
+
+/* Field Management Modal */
+.field-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 1500;
+}
+
+.field-modal-overlay.show {
+    opacity: 1;
+}
+
+.field-modal {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 600px;
+    max-width: 700px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9);
+    transition: transform 0.2s ease;
+}
+
+.field-modal-overlay.show .field-modal {
+    transform: scale(1);
+}
+
+.field-modal-header {
+    font-size: var(--font-lg);
+    color: var(--color-text-primary);
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.field-modal-section {
+    margin-bottom: 25px;
+}
+
+.field-modal-section-title {
+    font-size: var(--font-md);
+    color: var(--color-accent-bright);
+    margin-bottom: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.field-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+}
+
+.field-list-item.hidden {
+    opacity: 0.5;
+}
+
+.field-list-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.field-list-item-icon {
+    font-size: var(--font-lg);
+}
+
+.field-list-item-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.field-list-item-name {
+    font-size: var(--font-md);
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+
+.field-list-item-meta {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+}
+
+.field-list-item-btn {
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: var(--font-xs);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.field-list-item-btn:hover {
+    background-color: var(--color-bg-secondary);
+    border-color: var(--color-accent);
+}
+
+.field-list-item-btn.protected {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.field-list-item-btn.protected:hover {
+    background: none;
+    border-color: var(--color-border);
+}
+
+.add-field-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 15px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+}
+
+.add-field-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.add-field-label {
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    min-width: 100px;
+}
+
+.add-field-input {
+    flex: 1;
+    padding: 6px 10px;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+}
+
+.add-field-radio-group {
+    display: flex;
+    gap: 15px;
+}
+
+.add-field-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    font-size: var(--font-sm);
+    color: var(--color-text-secondary);
+}
+
+.add-field-checkbox {
+    cursor: pointer;
+}
+
+.add-field-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.add-field-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-field-btn.add {
+    background-color: var(--color-accent);
+    color: white;
+}
+
+.add-field-btn.add:hover {
+    background-color: var(--color-accent-bright);
+}
+
+.field-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.field-modal-close {
+    padding: 8px 20px;
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.field-modal-close:hover {
+    background-color: #3a3a3a;
+}
+
+/* Restart prompt */
+.restart-prompt-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 2000;
+}
+
+.restart-prompt-overlay.show {
+    opacity: 1;
+}
+
+.restart-prompt {
+    background-color: var(--color-bg-secondary);
+    border: 2px solid var(--color-accent);
+    border-radius: 8px;
+    padding: 30px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.restart-prompt-title {
+    font-size: var(--font-lg);
+    color: var(--color-text-primary);
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.restart-prompt-message {
+    font-size: var(--font-md);
+    color: var(--color-text-secondary);
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.restart-prompt-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.restart-prompt-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: var(--font-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.restart-prompt-btn.now {
+    background-color: var(--color-accent);
+    color: white;
+}
+
+.restart-prompt-btn.now:hover {
+    background-color: var(--color-accent-bright);
+}
+
+.restart-prompt-btn.later {
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.restart-prompt-btn.later:hover {
     background-color: #3a3a3a;
 }
 
