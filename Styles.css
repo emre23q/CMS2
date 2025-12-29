@@ -10,7 +10,7 @@
    ============================================ */
 :root {
     /* Font Scale - Adjust this one number to change all text sizes */
-    --font-scale: 1.5;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
+    --font-scale: 1.20;  /* 1.0 = normal, 1.2 = 20% bigger, 1.5 = 50% bigger */
     
     /* Base font sizes (scaled automatically) */
     --font-xs: calc(11px * var(--font-scale));   /* Small labels */
