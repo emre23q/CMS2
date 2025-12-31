@@ -1,8 +1,8 @@
 version: 1.0.0
 files:
   - url: CMS-Setup-1.0.0.exe
-    sha512: bzvjiv3OmoCVk57A1XtW1eI9gO0jQ79iQHHxxABrNAkNPRDelZssO+2XXpEJZfBenkaWxAHdqvwnYvgFLdK4Ew==
-    size: 102147987
+    sha512: W1/Ik91wg1ptUYUZj0OU8LJAcQv8JrtBWnYnWvytpEXSYqcdoTDq2e+cZAmJh9SM4vlghlMl8PC6ZUrmM3zfmg==
+    size: 102148202
 path: CMS-Setup-1.0.0.exe
-sha512: bzvjiv3OmoCVk57A1XtW1eI9gO0jQ79iQHHxxABrNAkNPRDelZssO+2XXpEJZfBenkaWxAHdqvwnYvgFLdK4Ew==
-releaseDate: '2025-12-31T00:18:05.890Z'
+sha512: W1/Ik91wg1ptUYUZj0OU8LJAcQv8JrtBWnYnWvytpEXSYqcdoTDq2e+cZAmJh9SM4vlghlMl8PC6ZUrmM3zfmg==
+releaseDate: '2025-12-31T01:02:09.773Z'

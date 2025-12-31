@@ -828,11 +828,21 @@ async function loadClientDetails(clientID) {
             const span = document.createElement('span');
             span.dataset.field = key;
             
+            // Check if this is a date field
+            const fieldMeta = fieldMetadata.find(f => f.fieldName === key);
+            const isDateField = fieldMeta && fieldMeta.dataType === 'DATE';
+            
+            // Format value for display
+            let displayValue = value || '-';
+            if (value && isDateField) {
+                displayValue = formatDateField(value);
+            }
+            
             // Highlight if in search mode
             if (isSearchMode && currentSearchTerm && value) {
-                span.innerHTML = highlightText(String(value), currentSearchTerm);
+                span.innerHTML = highlightText(String(displayValue), currentSearchTerm);
             } else {
-                span.textContent = value || '-';
+                span.textContent = displayValue;
             }
             
             // Mark editable fields (all except clientID)
@@ -1016,7 +1026,7 @@ function formatFieldName(fieldName) {
 }
 
 /**
- * Format date for display
+ * Format date for display (note timestamps)
  */
 function formatDate(dateString) {
     if (!dateString) return '-';
@@ -1036,6 +1046,24 @@ function formatDate(dateString) {
         minute: '2-digit',
         hour12: true
     });
+}
+
+/**
+ * Format date field from YYYY-MM-DD to DD-MM-YYYY
+ */
+function formatDateField(dateString) {
+    if (!dateString) return '-';
+    
+    // Handle YYYY-MM-DD format from database
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return dateString; // Return as-is if not recognized format
+    
+    const year = parts[0];
+    const month = parts[1];
+    const day = parts[2];
+    
+    // Return as DD-MM-YYYY
+    return `${day}-${month}-${year}`;
 }
 
 /**
@@ -1238,7 +1266,7 @@ function parseDateInput(inputString) {
     
     let day, month, year;
     
-    // Assume DD/MM/YYYY format (Australian)
+    // Assume DD-MM-YYYY format (accepts /, -, ., or space as separator)
     day = parseInt(parts[0], 10);
     month = parseInt(parts[1], 10);
     year = parseInt(parts[2], 10);
@@ -1282,8 +1310,9 @@ function collectClientData() {
         
         let value = span.textContent.trim();
         
-        // Parse date fields
-        if (fieldName === 'dob') {
+        // Parse date fields (check fieldMetadata to see if it's a DATE type)
+        const fieldMeta = fieldMetadata.find(f => f.fieldName === fieldName);
+        if (fieldMeta && fieldMeta.dataType === 'DATE') {
             const parsedDate = parseDateInput(value);
             if (parsedDate) {
                 value = parsedDate;
@@ -1599,7 +1628,7 @@ function validateField(fieldName, value) {
         if (!parsedDate) {
             return {
                 valid: false,
-                error: 'Invalid date format. Please use DD/MM/YYYY'
+                error: 'Invalid date format. Please use DD-MM-YYYY (e.g., 31-12-2024)'
             };
         }
         return {
@@ -1629,8 +1658,18 @@ async function saveFieldEdit(span, fieldName, newValue) {
         // Call API
         await window.api.updateClient(currentClientID, updateData);
         
-        // Update span with new value
-        span.textContent = newValue;
+        // Check if this is a date field
+        const fieldMeta = fieldMetadata.find(f => f.fieldName === fieldName);
+        const isDateField = fieldMeta && fieldMeta.dataType === 'DATE';
+        
+        // Format value for display (convert YYYY-MM-DD back to DD-MM-YYYY for dates)
+        let displayValue = newValue;
+        if (isDateField && newValue) {
+            displayValue = formatDateField(newValue);
+        }
+        
+        // Update span with formatted value
+        span.textContent = displayValue;
         
         // Reload client list if name changed (to update sidebar)
         if (fieldName === "firstName" || fieldName === "lastName"){
