@@ -619,40 +619,26 @@ ipcMain.handle('add-field', (event, fieldName, dataType, isRequired, defaultValu
             throw new Error('Field already exists');
         }
         
-        // Validate and format default value for DATE fields
-        let processedDefault = defaultValue;
-        if (dataType === 'DATE' && defaultValue && defaultValue.trim() !== '') {
-            // Parse DD/MM/YYYY to YYYY-MM-DD
-            const parsed = parseDateInputBackend(defaultValue.trim());
-            if (!parsed) {
-                throw new Error('Invalid date format for default value. Please use DD/MM/YYYY');
-            }
-            processedDefault = parsed;
-        }
-        
         // Build ALTER TABLE statement
+        // ALL custom fields are optional (no NOT NULL constraint)
+        // Only firstName and lastName are required (protected fields)
         let sqlType = dataType === 'DATE' ? 'DATE' : 'TEXT';
         let alterSQL = `ALTER TABLE Client ADD COLUMN ${fieldName} ${sqlType}`;
         
-        if (isRequired) {
-            if (!processedDefault || processedDefault.trim() === '') {
-                throw new Error('Required fields must have a default value');
-            }
-            alterSQL += ` NOT NULL DEFAULT '${processedDefault.replace(/'/g, "''")}'`;
-        }
+        // No NOT NULL constraint for custom fields
         
         // Add column to Client table
         db.run(alterSQL);
         
-        // Add to FieldMetadata
+        // Add to FieldMetadata (always set isRequired to 0 for custom fields)
         db.run(
-            "INSERT INTO FieldMetadata (fieldName, dataType, isRequired, isHidden, isProtected) VALUES (?, ?, ?, 0, 0)",
-            [fieldName, dataType, isRequired ? 1 : 0]
+            "INSERT INTO FieldMetadata (fieldName, dataType, isRequired, isHidden, isProtected) VALUES (?, ?, 0, 0, 0)",
+            [fieldName, dataType]
         );
         
         saveDatabase();
         
-        console.log('Added field:', fieldName);
+        console.log('Added optional field:', fieldName);
         return true;
         
     } catch (error) {

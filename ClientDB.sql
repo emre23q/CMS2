@@ -6,12 +6,12 @@ CREATE TABLE IF NOT EXISTS Client (
   clientID      INTEGER   PRIMARY KEY,
   firstName     TEXT      NOT NULL,
   lastName      TEXT      NOT NULL,
-  dob           DATE      NOT NULL,
-  gender        TEXT      NOT NULL,
-  email         TEXT      NOT NULL,
-  phone         TEXT      NOT NULL,
-  address       TEXT      NOT NULL,
-  insurance     TEXT      NOT NULL,
+  dob           DATE      ,
+  gender        TEXT      ,
+  email         TEXT      ,
+  phone         TEXT      ,
+  address       TEXT      ,
+  insurance     TEXT      ,
   clientSince   DATE      NOT NULL DEFAULT (CURRENT_DATE)
 );
 

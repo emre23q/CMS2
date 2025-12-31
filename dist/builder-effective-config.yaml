@@ -1,0 +1,38 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.ezme.cms
+productName: CMS
+files:
+  - filter:
+      - Main.js
+      - Preload.js
+      - Renderer.js
+      - Index.html
+      - Styles.css
+      - ClientDB.sql
+      - package.json
+      - node_modules/**/*
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: CMS
+mac:
+  target:
+    - dmg
+  icon: icon.icns
+  category: public.app-category.business
+linux:
+  target:
+    - AppImage
+  icon: icon.png
+  category: Office
+electronVersion: 39.2.7

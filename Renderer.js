@@ -404,55 +404,8 @@ async function showFieldManagementModal() {
         typeRow.appendChild(typeLabel);
         typeRow.appendChild(typeRadios);
         
-        // Required checkbox
-        const requiredRow = document.createElement('div');
-        requiredRow.className = 'add-field-row';
-        const requiredLabel = document.createElement('label');
-        requiredLabel.className = 'add-field-radio-label';
-        const requiredCheckbox = document.createElement('input');
-        requiredCheckbox.type = 'checkbox';
-        requiredCheckbox.id = 'new-field-required';
-        requiredCheckbox.className = 'add-field-checkbox';
-        requiredLabel.appendChild(requiredCheckbox);
-        requiredLabel.appendChild(document.createTextNode(' Required'));
-        requiredRow.appendChild(document.createElement('label')); // Empty label for alignment
-        requiredRow.appendChild(requiredLabel);
-        
-        // Default Value (shown when Required is checked)
-        const defaultRow = document.createElement('div');
-        defaultRow.className = 'add-field-row';
-        defaultRow.style.display = 'none';
-        const defaultLabel = document.createElement('label');
-        defaultLabel.className = 'add-field-label';
-        defaultLabel.textContent = 'Default:';
-        const defaultInput = document.createElement('input');
-        defaultInput.className = 'add-field-input';
-        defaultInput.id = 'new-field-default';
-        defaultInput.placeholder = 'Default value for existing clients';
-        defaultRow.appendChild(defaultLabel);
-        defaultRow.appendChild(defaultInput);
-        
-        // Update placeholder based on data type
-        const updateDefaultPlaceholder = () => {
-            const selectedType = typeRadios.querySelector('input[name="field-type"]:checked').value;
-            if (selectedType === 'DATE') {
-                defaultInput.placeholder = 'DD/MM/YYYY (e.g., 01/01/2024)';
-            } else {
-                defaultInput.placeholder = 'Default value for existing clients';
-            }
-        };
-        
-        // Listen for data type changes
-        textInput.addEventListener('change', updateDefaultPlaceholder);
-        dateInput.addEventListener('change', updateDefaultPlaceholder);
-        
-        // Show/hide default field based on required checkbox
-        requiredCheckbox.addEventListener('change', () => {
-            defaultRow.style.display = requiredCheckbox.checked ? 'flex' : 'none';
-            if (requiredCheckbox.checked) {
-                updateDefaultPlaceholder();
-            }
-        });
+        // REMOVED: Required checkbox - all custom fields are optional
+        // Only firstName and lastName are required (protected fields)
         
         // Add Field button
         const addFieldActions = document.createElement('div');
@@ -461,16 +414,14 @@ async function showFieldManagementModal() {
         addFieldBtn.className = 'add-field-btn add';
         addFieldBtn.textContent = 'Add Field';
         addFieldBtn.addEventListener('click', async () => {
-            await handleAddField(nameInput.value, typeRadios, requiredCheckbox.checked, defaultInput.value);
+            await handleAddField(nameInput.value, typeRadios, false, ''); // Always optional, no default needed
         });
         addFieldActions.appendChild(addFieldBtn);
         
         addFieldForm.appendChild(nameRow);
         addFieldForm.appendChild(typeRow);
-        addFieldForm.appendChild(requiredRow);
-        addFieldForm.appendChild(defaultRow);
+        // REMOVED: requiredRow and defaultRow
         addFieldForm.appendChild(addFieldActions);
-        
         addFieldSection.appendChild(addFieldTitle);
         addFieldSection.appendChild(addFieldForm);
         
