@@ -29,19 +29,24 @@ function createWindow() {
 
 function createDatabaseFolderIfNone(databaseFolder, attachmentsFolder){
     if (!fs.existsSync(databaseFolder)) {
-        fs.mkdirSync(databaseFolder);
+        fs.mkdirSync(databaseFolder, { recursive: true });
     }
     if (!fs.existsSync(attachmentsFolder)) {
-        fs.mkdirSync(attachmentsFolder);
+        fs.mkdirSync(attachmentsFolder, { recursive: true });
     }
 }
 
 async function initDatabase(){
-    const appPath = app.getAppPath();
-    const databaseFolder = path.join(appPath, 'Database');
+    // Use userData path instead of appPath for user-specific data
+    const userDataPath = app.getPath('userData');
+    const databaseFolder = path.join(userDataPath, 'Database');
     const attachmentsFolder = path.join(databaseFolder, 'Attachments');
     const dbPath = path.join(databaseFolder, 'ClientDB.db');
+    
+    // SQL file should still be in the app directory (bundled with exe)
+    const appPath = app.getAppPath();
     const sqlPath = path.join(appPath, 'ClientDB.sql');
+    
     createDatabaseFolderIfNone(databaseFolder, attachmentsFolder);
     const sql = await initSqlJs();
     if (fs.existsSync(dbPath)) {
@@ -64,8 +69,9 @@ async function initDatabase(){
 }
 
 function saveDatabase(){
-    const appPath = app.getAppPath(); 
-    const databaseFolder = path.join(appPath, 'Database');
+    // Use userData path for saving
+    const userDataPath = app.getPath('userData');
+    const databaseFolder = path.join(userDataPath, 'Database');
     const dbPath = path.join(databaseFolder, 'ClientDB.db');
     if (db){
         const data = db.export();
@@ -229,31 +235,18 @@ ipcMain.handle('delete-client', (event, clientID) => {
         db.run("DELETE FROM Client WHERE clientID = ?", [clientID]);
         saveDatabase();
         
-        // Delete all attachments for this client
-        const appPath = app.getAppPath();
-        const clientAttachmentsDir = path.join(appPath, 'Database', 'Attachments', String(clientID));
+        // Delete all attachments for this client - USE USERDATA PATH
+        const userDataPath = app.getPath('userData');
+        const clientAttachmentsPath = path.join(userDataPath, 'Database', 'Attachments', String(clientID));
         
-        if (fs.existsSync(clientAttachmentsDir)) {
-            // Recursively delete the entire client attachments directory
-            const deleteRecursive = (dirPath) => {
-                if (fs.existsSync(dirPath)) {
-                    fs.readdirSync(dirPath).forEach(file => {
-                        const filePath = path.join(dirPath, file);
-                        if (fs.statSync(filePath).isDirectory()) {
-                            deleteRecursive(filePath);
-                        } else {
-                            fs.unlinkSync(filePath);
-                        }
-                    });
-                    fs.rmdirSync(dirPath);
-                }
-            };
-            
-            deleteRecursive(clientAttachmentsDir);
-            console.log('Deleted all attachments for client:', clientID);
+        if (fs.existsSync(clientAttachmentsPath)) {
+            fs.rmSync(clientAttachmentsPath, { recursive: true, force: true });
+            console.log('Deleted attachments for client:', clientID);
         }
         
+        console.log('Deleted client:', clientID);
         return true;
+        
     } catch (error) {
         console.error('Error deleting client:', error);
         throw new Error('Failed to delete client: ' + error.message);
@@ -262,111 +255,83 @@ ipcMain.handle('delete-client', (event, clientID) => {
 
 ipcMain.handle('update-client', (event, clientID, clientData) => {
     try {
-        const schemaResult = db.exec("PRAGMA table_info(Client)");
+        // Get valid columns
+        const schemaResult = db.exec("PRAGMA table_info(Client);");
         const validColumns = schemaResult[0].values.map(col => col[1]);
-                const columns = Object.keys(clientData)
-            .filter(col => validColumns.includes(col))
-            .filter(col => col !== 'clientID'); 
-
+        
+        // Filter to only valid columns (exclude clientID)
+        const columns = Object.keys(clientData).filter(col => 
+            validColumns.includes(col) && col !== 'clientID'
+        );
+        
         if (columns.length === 0) {
-            throw new Error('No valid columns to update');
+            throw new Error('No valid columns to update.');
         }
-
-        const setClause = columns.map(col => `${col} = ?`).join(', ');
-        const values = [...columns.map(col => clientData[col]), clientID];
+        
+        const values = columns.map(col => clientData[col]);
+        values.push(clientID); // Add clientID for WHERE clause
+        
+        const setClause = columns.map(col => `${col} = ?`).join(", ");
         const sql = `UPDATE Client SET ${setClause} WHERE clientID = ?`;
+        
         db.run(sql, values);
         saveDatabase();
+        
+        console.log('Updated client:', clientID);
         return true;
-    
+        
     } catch (error) {
         console.error('Error updating client:', error);
         throw new Error('Failed to update client: ' + error.message);
     }
 });
-/*example data format
-{
-  clientID: 1,
-  noteType: 'General',
-  content: 'This is a note.'}
-*/
-ipcMain.handle('add-note', (event,noteData) => {
+
+// Note Operations
+
+ipcMain.handle('get-notes', (event, clientID) => {
     try {
-        const noteType = noteData.noteType;
-        const content = noteData.content;
-        const clientID = noteData.clientID;
-        db.run("INSERT INTO History (clientID, noteType, content) VALUES (?, ?, ?)", [clientID, noteType, content]);
-        saveDatabase();
+        const result = db.exec("SELECT * FROM History WHERE clientID = ? ORDER BY createdOn DESC", [clientID]);
+        return mapDbResult(result);
+    } catch (error) {
+        console.error('Error getting notes:', error);
+        throw new Error('Failed to get notes: ' + error.message);
+    }
+});
+
+ipcMain.handle('add-note', (event, noteData) => {
+    try {
+        const { clientID, noteType, content } = noteData;
+        
+        db.run(
+            "INSERT INTO History (clientID, noteType, content) VALUES (?, ?, ?)",
+            [clientID, noteType, content]
+        );
+        
         const result = db.exec("SELECT last_insert_rowid() as noteID;");
+        saveDatabase();
+        
         const newNoteID = result[0].values[0][0];
+        console.log('Added note:', newNoteID);
         return newNoteID;
+        
     } catch (error) {
         console.error('Error adding note:', error);
         throw new Error('Failed to add note: ' + error.message);
     }
 });
 
-ipcMain.handle('delete-note', (event, noteID) => {
-    try {
-        // First, get the clientID before deleting the note
-        const result = db.exec("SELECT clientID FROM History WHERE noteID = ?", [noteID]);
-        const clientID = result[0] && result[0].values[0] ? result[0].values[0][0] : null;
-        
-        // Delete the note from database
-        db.run("DELETE FROM History WHERE noteID = ?", [noteID]);
-        saveDatabase();
-        
-        // Delete attachments folder if it exists
-        if (clientID) {
-            const appPath = app.getAppPath();
-            const attachmentDir = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID));
-            
-            if (fs.existsSync(attachmentDir)) {
-                // Delete all files in the directory
-                const files = fs.readdirSync(attachmentDir);
-                files.forEach(file => {
-                    const filePath = path.join(attachmentDir, file);
-                    fs.unlinkSync(filePath);
-                });
-                
-                // Delete the directory itself
-                fs.rmdirSync(attachmentDir);
-                
-                console.log('Deleted attachments folder:', attachmentDir);
-            }
-        }
-        
-        return true;
-
-    } catch (error) {
-        console.error('Error deleting note:', error);
-        throw new Error('Failed to delete note: ' + error.message);
-    }
-});
-
-/* example data format
-{
-  noteType: 'Updated Type',
-  content: 'Updated content.'
-}
-*/
-
 ipcMain.handle('update-note', (event, noteID, noteData) => {
     try {
-        const schemaResult = db.exec("PRAGMA table_info(History)");
-        const validColumns = schemaResult[0].values.map(col => col[1]);
-        const columns = Object.keys(noteData)
-            .filter(col => validColumns.includes(col))
-            .filter(col => col !== 'noteID');
+        const { noteType, content } = noteData;
         
-        if (columns.length === 0) {
-            throw new Error('No valid columns to update');
-        }
-        const setClause = columns.map(col => `${col} = ?`).join(', ');
-        const values = [...columns.map(col => noteData[col]), noteID];
-        const sql = `UPDATE History SET ${setClause} WHERE noteID = ?`;
-        db.run(sql, values);
+        db.run(
+            "UPDATE History SET noteType = ?, content = ? WHERE noteID = ?",
+            [noteType, content, noteID]
+        );
+        
         saveDatabase();
+        
+        console.log('Updated note:', noteID);
         return true;
         
     } catch (error) {
@@ -375,106 +340,152 @@ ipcMain.handle('update-note', (event, noteID, noteData) => {
     }
 });
 
-ipcMain.handle('get-notes', (event, clientID) => {
+ipcMain.handle('delete-note', (event, noteID) => {
     try {
-        const result = db.exec("SELECT * FROM History WHERE clientID = ? ORDER BY createdOn DESC",[clientID]);
-        return mapDbResult(result);
+        // Get note info first to find its client
+        const result = db.exec("SELECT clientID FROM History WHERE noteID = ?", [noteID]);
+        
+        if (!result[0] || result[0].values.length === 0) {
+            throw new Error('Note not found');
+        }
+        
+        const clientID = result[0].values[0][0];
+        
+        // Delete note from database
+        db.run("DELETE FROM History WHERE noteID = ?", [noteID]);
+        saveDatabase();
+        
+        // Delete all attachments for this note - USE USERDATA PATH
+        const userDataPath = app.getPath('userData');
+        const noteAttachmentsPath = path.join(userDataPath, 'Database', 'Attachments', String(clientID), String(noteID));
+        
+        if (fs.existsSync(noteAttachmentsPath)) {
+            fs.rmSync(noteAttachmentsPath, { recursive: true, force: true });
+            console.log('Deleted attachments for note:', noteID);
+        }
+        
+        console.log('Deleted note:', noteID);
+        return true;
+        
     } catch (error) {
-        console.error('Error getting notes:', error);
-        throw new Error('Failed to get notes: ' + error.message);
+        console.error('Error deleting note:', error);
+        throw new Error('Failed to delete note: ' + error.message);
     }
 });
 
+// Search operation
+
 ipcMain.handle('search-clients', (event, searchTerm) => {
     try {
-        // Empty search = all clients
+        // If search term is empty, return all clients
         if (!searchTerm || searchTerm.trim() === '') {
-            const result = db.exec('SELECT clientID, firstName, lastName FROM Client ORDER BY lastName, firstName');
+            const result = db.exec("SELECT clientID, firstName, lastName FROM Client ORDER BY lastName, firstName");
             return mapDbResult(result);
         }
         
-        const pattern = `%${searchTerm}%`;
+        // Otherwise, search across all Client fields, note content, and attachment filenames
+        const term = `%${searchTerm}%`;
         
-        // Get non-hidden Client table columns dynamically
-        const schemaResult = db.exec("PRAGMA table_info(Client)");
-        const allColumns = schemaResult[0].values.map(col => col[1]);
+        // Get all clients
+        const allClientsResult = db.exec("SELECT * FROM Client");
+        const allClients = mapDbResult(allClientsResult);
         
-        // Get hidden fields
-        const hiddenResult = db.exec("SELECT fieldName FROM FieldMetadata WHERE isHidden = 1");
-        const hiddenFields = hiddenResult[0] ? hiddenResult[0].values.map(row => row[0]) : [];
+        // Get all notes
+        const allNotesResult = db.exec("SELECT clientID, content FROM History");
+        const allNotes = mapDbResult(allNotesResult);
         
-        // Filter out hidden fields
-        const visibleColumns = allColumns.filter(col => !hiddenFields.includes(col));
+        const matchingClientIDs = new Set();
         
-        // Build WHERE clause for visible client fields only
-        const clientWhereConditions = visibleColumns.map(col => `c.${col} LIKE ?`).join(' OR ');
-        
-        // Build SQL with dynamic client fields + notes + attachments
-        const sql = `
-            SELECT DISTINCT c.clientID, c.firstName, c.lastName
-            FROM Client c
-            LEFT JOIN History h ON c.clientID = h.clientID
-            WHERE ${clientWhereConditions}
-               OR h.noteType LIKE ?
-               OR h.content LIKE ?
-            ORDER BY c.lastName, c.firstName
-        `;
-        
-        // Create parameter array: one for each visible column + 2 for notes
-        const params = [...visibleColumns.map(() => pattern), pattern, pattern];
-        
-        const result = db.exec(sql, params);
-        let clients = mapDbResult(result);
-        
-        // Also search attachment filenames
-        const appPath = app.getAppPath();
-        const attachmentsPath = path.join(appPath, 'Database', 'Attachments');
-        
-        if (fs.existsSync(attachmentsPath)) {
-            const clientDirs = fs.readdirSync(attachmentsPath);
-            
-            clientDirs.forEach(clientID => {
-                const clientPath = path.join(attachmentsPath, clientID);
-                if (fs.statSync(clientPath).isDirectory()) {
-                    const noteDirs = fs.readdirSync(clientPath);
-                    
-                    noteDirs.forEach(noteID => {
-                        const notePath = path.join(clientPath, noteID);
-                        if (fs.statSync(notePath).isDirectory()) {
-                            const files = fs.readdirSync(notePath);
-                            
-                            // Check if any filename matches search term
-                            const hasMatch = files.some(file => 
-                                file.toLowerCase().includes(searchTerm.toLowerCase())
-                            );
-                            
-                            if (hasMatch) {
-                                // Get client info
-                                const clientResult = db.exec(
-                                    "SELECT clientID, firstName, lastName FROM Client WHERE clientID = ?",
-                                    [parseInt(clientID)]
-                                );
-                                const client = mapDbResult(clientResult)[0];
-                                
-                                // Add to results if not already there
-                                if (client && !clients.some(c => c.clientID === client.clientID)) {
-                                    clients.push(client);
-                                }
-                            }
-                        }
-                    });
-                }
-            });
-            
-            // Re-sort after adding attachment matches
-            clients.sort((a, b) => {
-                const lastNameCompare = a.lastName.localeCompare(b.lastName);
-                if (lastNameCompare !== 0) return lastNameCompare;
-                return a.firstName.localeCompare(b.firstName);
-            });
+        // Get hidden fields from FieldMetadata
+        let hiddenFields = [];
+        try {
+            const hiddenFieldsResult = db.exec("SELECT fieldName FROM FieldMetadata WHERE isHidden = 1");
+            if (hiddenFieldsResult && hiddenFieldsResult[0]) {
+                hiddenFields = hiddenFieldsResult[0].values.map(row => row[0]);
+            }
+        } catch (error) {
+            console.error('Error fetching hidden fields:', error);
+            // Continue search even if we can't get hidden fields
         }
         
-        return clients;
+        // Search through client fields (excluding hidden fields)
+        allClients.forEach(client => {
+            // Search through all fields of the client, except hidden ones
+            for (const [key, value] of Object.entries(client)) {
+                // Skip hidden fields
+                if (hiddenFields.includes(key)) continue;
+                
+                if (value && String(value).toLowerCase().includes(searchTerm.toLowerCase())) {
+                    matchingClientIDs.add(client.clientID);
+                    break;
+                }
+            }
+        });
+        
+        // Search through notes
+        allNotes.forEach(note => {
+            if (note.content && note.content.toLowerCase().includes(searchTerm.toLowerCase())) {
+                matchingClientIDs.add(note.clientID);
+            }
+        });
+        
+        // Search through attachment filenames
+        const userDataPath = app.getPath('userData');
+        const attachmentsBasePath = path.join(userDataPath, 'Database', 'Attachments');
+        
+        if (fs.existsSync(attachmentsBasePath)) {
+            try {
+                // Get all client folders
+                const clientFolders = fs.readdirSync(attachmentsBasePath);
+                
+                clientFolders.forEach(clientIDStr => {
+                    const clientID = parseInt(clientIDStr, 10);
+                    if (isNaN(clientID)) return;
+                    
+                    const clientAttachmentsPath = path.join(attachmentsBasePath, clientIDStr);
+                    if (!fs.statSync(clientAttachmentsPath).isDirectory()) return;
+                    
+                    // Get all note folders for this client
+                    const noteFolders = fs.readdirSync(clientAttachmentsPath);
+                    
+                    noteFolders.forEach(noteID => {
+                        const notePath = path.join(clientAttachmentsPath, noteID);
+                        if (!fs.statSync(notePath).isDirectory()) return;
+                        
+                        // Get all files in this note folder
+                        const files = fs.readdirSync(notePath);
+                        
+                        files.forEach(fileName => {
+                            if (fileName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                                matchingClientIDs.add(clientID);
+                            }
+                        });
+                    });
+                });
+            } catch (attachmentError) {
+                console.error('Error searching attachments:', attachmentError);
+                // Continue even if attachment search fails
+            }
+        }
+        
+        // Return clients that match
+        const clients = allClients.filter(client => matchingClientIDs.has(client.clientID));
+        
+        // Sort by last name, first name
+        clients.sort((a, b) => {
+            if (a.lastName < b.lastName) return -1;
+            if (a.lastName > b.lastName) return 1;
+            if (a.firstName < b.firstName) return -1;
+            if (a.firstName > b.firstName) return 1;
+            return 0;
+        });
+        
+        // Return minimal info for list
+        return clients.map(client => ({
+            clientID: client.clientID,
+            firstName: client.firstName,
+            lastName: client.lastName
+        }));
         
     } catch (error) {
         console.error('Error searching clients:', error);
@@ -487,8 +498,8 @@ const { shell } = require('electron');
 
 ipcMain.handle('get-attachments', (event, clientID) => {
     try {
-        const appPath = app.getAppPath();
-        const clientAttachmentsPath = path.join(appPath, 'Database', 'Attachments', String(clientID));
+        const userDataPath = app.getPath('userData');
+        const clientAttachmentsPath = path.join(userDataPath, 'Database', 'Attachments', String(clientID));
         
         // Check if client attachments directory exists
         if (!fs.existsSync(clientAttachmentsPath)) {
@@ -521,8 +532,8 @@ ipcMain.handle('get-attachments', (event, clientID) => {
 
 ipcMain.handle('save-attachment', (event, clientID, noteID, fileName, fileBuffer) => {
     try {
-        const appPath = app.getAppPath();
-        const attachmentDir = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID));
+        const userDataPath = app.getPath('userData');
+        const attachmentDir = path.join(userDataPath, 'Database', 'Attachments', String(clientID), String(noteID));
         
         // Create directory if it doesn't exist
         if (!fs.existsSync(attachmentDir)) {
@@ -545,8 +556,8 @@ ipcMain.handle('save-attachment', (event, clientID, noteID, fileName, fileBuffer
 
 ipcMain.handle('delete-attachment', (event, clientID, noteID, fileName) => {
     try {
-        const appPath = app.getAppPath();
-        const filePath = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID), fileName);
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'Database', 'Attachments', String(clientID), String(noteID), fileName);
         
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
@@ -564,8 +575,8 @@ ipcMain.handle('delete-attachment', (event, clientID, noteID, fileName) => {
 
 ipcMain.handle('open-attachment', async (event, clientID, noteID, fileName) => {
     try {
-        const appPath = app.getAppPath();
-        const filePath = path.join(appPath, 'Database', 'Attachments', String(clientID), String(noteID), fileName);
+        const userDataPath = app.getPath('userData');
+        const filePath = path.join(userDataPath, 'Database', 'Attachments', String(clientID), String(noteID), fileName);
         
         if (fs.existsSync(filePath)) {
             await shell.openPath(filePath);

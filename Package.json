@@ -1,14 +1,62 @@
 {
-  "name": "customer-management",
+  "name": "cms",
   "version": "1.0.0",
-  "main": "main.js",
+  "description": "CMS - Customer Management System",
+  "author": "Brandon Ozdemir",
+  "main": "Main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder build --win --publish never",
+    "build-all": "electron-builder build --win --mac --linux --publish never"
   },
   "devDependencies": {
-    "electron": "^39.2.7"
+    "electron": "^39.2.7",
+    "electron-builder": "^25.1.8"
   },
   "dependencies": {
     "sql.js": "^1.8.0"
+  },
+  "build": {
+    "appId": "com.ezme.cms",
+    "productName": "CMS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "Main.js",
+      "Preload.js",
+      "Renderer.js",
+      "Index.html",
+      "Styles.css",
+      "ClientDB.sql",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CMS"
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "icon.icns",
+      "category": "public.app-category.business"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "icon.png",
+      "category": "Office"
+    }
   }
 }

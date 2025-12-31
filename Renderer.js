@@ -173,6 +173,10 @@ async function performSearch(searchTerm) {
         // Clear existing list
         clientListElement.innerHTML = '';
         
+        // Also explicitly remove any existing empty-message elements (belt and suspenders approach)
+        const existingMessages = clientListElement.querySelectorAll('.empty-message');
+        existingMessages.forEach(msg => msg.remove());
+        
         if (clients.length === 0) {
             // Show "No results found" and reload all clients
             const message = document.createElement('p');
