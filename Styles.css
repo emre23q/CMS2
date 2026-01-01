@@ -86,10 +86,9 @@ body {
     height: 40%;
     background-color: #1a1a1a;
     border-bottom: 1px solid var(--color-border);
-    min-height: 150px;
-    max-height: 500px;
     flex-shrink: 0;
     position:relative;
+    overflow: hidden; /* Prevent header overflow when collapsed */
 
 }
 
@@ -100,6 +99,8 @@ body {
     flex: 1;
     background-color: var(--color-bg-primary);
     overflow: hidden;
+    position: relative;
+    z-index: 10; /* Render above collapsed details pane */
 }
 
 /* Pane header */
@@ -463,8 +464,10 @@ body {
     font-size: var(--font-md);
     color: var(--color-text-secondary);
     line-height: 1.5;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
+    word-wrap: break-word;      /* Breaks long words if needed */
+    overflow-wrap: break-word;  /* Modern version of word-wrap */
+    word-break: break-word;     /* Ensures breaking happens */
+    white-space: pre-wrap;      /* Preserves line breaks but allows wrapping */
 }
 
 /* Inline note editing */
@@ -1275,4 +1278,84 @@ body {
 
 .confirm-no:hover {
     background-color: #3a3a3a;
+}
+/* ============================================
+   RESIZE HANDLES
+   ============================================ */
+
+/* Base resize handle styles - hidden by default */
+.resize-handle {
+    background-color: var(--color-border);
+    opacity: 0;
+    transition: opacity 0.15s ease, background-color 0.2s ease;
+    z-index: 50;
+    position: relative;
+}
+
+/* Show handle when hovering nearby */
+.resize-handle.hover-nearby,
+.resize-handle.visible {
+    opacity: 1;
+}
+
+/* Collapsed pane - handle always visible */
+.resize-handle.collapsed {
+    opacity: 1 !important;
+}
+
+/* Handle being dragged */
+.resize-handle.dragging {
+    background-color: var(--color-accent-bright);
+    opacity: 1 !important;
+}
+
+/* Horizontal resize handle (between left and right panes) */
+.resize-handle-horizontal {
+    width: 6px;
+    cursor: col-resize;
+    flex-shrink: 0;
+}
+
+/* Vertical resize handle (between details and notes) */
+.resize-handle-vertical {
+    height: 6px;
+    cursor: row-resize;
+    flex-shrink: 0;
+}
+
+/* Prevent text selection during resize */
+body.resizing,
+body.resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
+
+body.resizing-vertical,
+body.resizing-vertical * {
+    cursor: row-resize !important;
+    user-select: none !important;
+}
+
+/* Pane collapse/expand animations */
+.pane-left,
+.pane-details {
+    transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* Override transition when actively dragging */
+.pane-left.no-transition,
+.pane-details.no-transition {
+    transition: none;
+}
+
+/* Ensure tick button stays visible even when details pane is small */
+.pane-details {
+    position: relative; /* Creates positioning context for tick button */
+}
+
+.pane-details .tick-button {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    z-index: 100; /* Always on top */
 }

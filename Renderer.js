@@ -2243,4 +2243,395 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeAddNoteButton();
     initializeSearch();
     initializeManageFieldsButton();
+    initializeResize();
 });
+/**
+ * ============================================
+ * RESIZE FUNCTIONALITY
+ * ============================================
+ */
+
+let isResizingHorizontal = false;
+let isResizingVertical = false;
+let previousLeftWidth = null;
+let previousDetailsHeight = null;
+const HOVER_PROXIMITY = 10; // pixels
+
+// Default sizes
+const DEFAULT_LEFT_WIDTH = 300;
+const DEFAULT_DETAILS_HEIGHT_PERCENT = 40;
+
+function initializeResize() {
+    const horizontalHandle = document.getElementById('horizontal-resize');
+    const verticalHandle = document.getElementById('vertical-resize');
+    const leftPane = document.querySelector('.pane-left');
+    const detailsPane = document.querySelector('.pane-details');
+    const notesPane = document.querySelector('.pane-notes');
+    const rightPane = document.querySelector('.pane-right');
+    const container = document.querySelector('.container');
+    
+    // Restore saved sizes from localStorage
+    restorePaneSizes();
+    
+    // Track mouse position for proximity hover
+    let mouseX = 0;
+    let mouseY = 0;
+    
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        
+        if (!isResizingHorizontal && !isResizingVertical) {
+            updateHandleVisibility(horizontalHandle, leftPane, mouseX, mouseY, 'horizontal');
+            updateHandleVisibility(verticalHandle, detailsPane, mouseX, mouseY, 'vertical');
+        }
+    });
+    
+    // Horizontal resize handle - mousedown
+    if (horizontalHandle && leftPane) {
+        horizontalHandle.addEventListener('mousedown', (e) => {
+            // Check if click (not drag) to toggle
+            const clickTime = Date.now();
+            
+            // Start tracking for potential drag
+            isResizingHorizontal = true;
+            document.body.classList.add('resizing');
+            horizontalHandle.classList.add('dragging');
+            leftPane.classList.add('no-transition');
+            
+            const initialX = e.clientX;
+            let hasDragged = false;
+            
+            const checkDrag = (moveE) => {
+                const deltaX = Math.abs(moveE.clientX - initialX);
+                if (deltaX > 3) {
+                    hasDragged = true;
+                }
+            };
+            
+            const finishInteraction = () => {
+                const clickDuration = Date.now() - clickTime;
+                
+                // If didn't drag and was quick, treat as click
+                if (!hasDragged && clickDuration < 200) {
+                    togglePaneCollapse(leftPane, horizontalHandle, 'left');
+                }
+                
+                isResizingHorizontal = false;
+                document.body.classList.remove('resizing');
+                horizontalHandle.classList.remove('dragging');
+                leftPane.classList.remove('no-transition');
+                
+                document.removeEventListener('mousemove', checkDrag);
+                document.removeEventListener('mouseup', finishInteraction);
+            };
+            
+            document.addEventListener('mousemove', checkDrag);
+            document.addEventListener('mouseup', finishInteraction);
+        });
+    }
+    
+    // Vertical resize handle - mousedown
+    if (verticalHandle && detailsPane && notesPane) {
+        verticalHandle.addEventListener('mousedown', (e) => {
+            const clickTime = Date.now();
+            
+            isResizingVertical = true;
+            document.body.classList.add('resizing-vertical');
+            verticalHandle.classList.add('dragging');
+            detailsPane.classList.add('no-transition');
+            
+            const initialY = e.clientY;
+            let hasDragged = false;
+            
+            const checkDrag = (moveE) => {
+                const deltaY = Math.abs(moveE.clientY - initialY);
+                if (deltaY > 3) {
+                    hasDragged = true;
+                }
+            };
+            
+            const finishInteraction = () => {
+                const clickDuration = Date.now() - clickTime;
+                
+                if (!hasDragged && clickDuration < 200) {
+                    togglePaneCollapse(detailsPane, verticalHandle, 'details');
+                }
+                
+                isResizingVertical = false;
+                document.body.classList.remove('resizing-vertical');
+                verticalHandle.classList.remove('dragging');
+                detailsPane.classList.remove('no-transition');
+                
+                document.removeEventListener('mousemove', checkDrag);
+                document.removeEventListener('mouseup', finishInteraction);
+            };
+            
+            document.addEventListener('mousemove', checkDrag);
+            document.addEventListener('mouseup', finishInteraction);
+        });
+    }
+    
+    // Mouse move handler for actual resizing
+    document.addEventListener('mousemove', (e) => {
+        const COLLAPSED_THRESHOLD = 10; // Panes smaller than this are considered collapsed
+        
+        if (isResizingHorizontal) {
+            const containerRect = container.getBoundingClientRect();
+            const newWidth = e.clientX - containerRect.left;
+            
+            if (newWidth >= 0) {
+                // Save previous size if we're about to go below threshold
+                if (newWidth > COLLAPSED_THRESHOLD && leftPane.offsetWidth > COLLAPSED_THRESHOLD) {
+                    savePaneSize('leftPaneWidth_previous', newWidth);
+                }
+                
+                leftPane.style.width = `${newWidth}px`;
+                previousLeftWidth = newWidth;
+                savePaneSize('leftPaneWidth', newWidth);
+                
+                // Update collapsed state
+                if (newWidth <= COLLAPSED_THRESHOLD) {
+                    horizontalHandle.classList.add('collapsed');
+                } else {
+                    horizontalHandle.classList.remove('collapsed');
+                }
+            }
+        }
+        
+        if (isResizingVertical) {
+            const rightPaneRect = rightPane.getBoundingClientRect();
+            const newHeight = e.clientY - rightPaneRect.top;
+            
+            if (newHeight >= 0) {
+                // Save previous size if we're about to go below threshold
+                if (newHeight > COLLAPSED_THRESHOLD && detailsPane.offsetHeight > COLLAPSED_THRESHOLD) {
+                    savePaneSize('detailsPaneHeight_previous', newHeight);
+                }
+                
+                detailsPane.style.height = `${newHeight}px`;
+                previousDetailsHeight = newHeight;
+                savePaneSize('detailsPaneHeight', newHeight);
+                
+                // Update collapsed state
+                if (newHeight <= COLLAPSED_THRESHOLD) {
+                    verticalHandle.classList.add('collapsed');
+                } else {
+                    verticalHandle.classList.remove('collapsed');
+                }
+            }
+        }
+    });
+    
+    // Keyboard shortcut: Ctrl+R to reset layout
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            resetLayout();
+        }
+    });
+}
+
+/**
+ * Update handle visibility based on mouse proximity
+ */
+function updateHandleVisibility(handle, pane, mouseX, mouseY, orientation) {
+    if (!handle || !pane) return;
+    
+    const COLLAPSED_THRESHOLD = 10; // Consider pane collapsed if <= 10px
+    const handleRect = handle.getBoundingClientRect();
+    const isCollapsed = (orientation === 'horizontal' && pane.offsetWidth <= COLLAPSED_THRESHOLD) ||
+                       (orientation === 'vertical' && pane.offsetHeight <= COLLAPSED_THRESHOLD);
+    
+    // Always show if pane is collapsed
+    if (isCollapsed) {
+        handle.classList.add('visible');
+        return;
+    }
+    
+    // Check proximity
+    let distance;
+    if (orientation === 'horizontal') {
+        distance = Math.abs(mouseX - handleRect.left);
+    } else {
+        distance = Math.abs(mouseY - handleRect.top);
+    }
+    
+    if (distance <= HOVER_PROXIMITY) {
+        handle.classList.add('hover-nearby');
+    } else {
+        handle.classList.remove('hover-nearby');
+        handle.classList.remove('visible');
+    }
+}
+
+/**
+ * Toggle pane collapse/expand
+ */
+function togglePaneCollapse(pane, handle, paneType) {
+    const COLLAPSED_WIDTH = 5; // Minimum visible pixels when collapsed
+    
+    const isCollapsed = (paneType === 'left' && pane.offsetWidth <= COLLAPSED_WIDTH) ||
+                       (paneType === 'details' && pane.offsetHeight <= COLLAPSED_WIDTH);
+    
+    console.log(`togglePaneCollapse called for ${paneType}, isCollapsed: ${isCollapsed}, current size: ${paneType === 'left' ? pane.offsetWidth : pane.offsetHeight}`);
+    
+    if (isCollapsed) {
+        // Expand - restore previous size from localStorage
+        let size;
+        if (paneType === 'left') {
+            // Try to get the saved previous size from localStorage first
+            size = getSavedPaneSize('leftPaneWidth_previous') || previousLeftWidth || DEFAULT_LEFT_WIDTH;
+            console.log('Expanding left pane to:', size, 'px');
+            pane.style.width = `${size}px`;
+            savePaneSize('leftPaneWidth', size);
+            previousLeftWidth = size;
+            handle.classList.remove('collapsed');
+        } else {
+            // Details pane expansion
+            const savedPrevious = getSavedPaneSize('detailsPaneHeight_previous');
+            console.log('Details pane expansion - savedPrevious from localStorage:', savedPrevious);
+            console.log('Details pane expansion - previousDetailsHeight variable:', previousDetailsHeight);
+            
+            const rightPane = document.querySelector('.pane-right');
+            const defaultHeight = rightPane.offsetHeight * (DEFAULT_DETAILS_HEIGHT_PERCENT / 100);
+            console.log('Details pane expansion - calculated default:', defaultHeight);
+            
+            size = savedPrevious || previousDetailsHeight || defaultHeight;
+            console.log('Expanding details pane to:', size, 'px (using first non-null value)');
+            
+            pane.style.height = `${size}px`;
+            pane.style.minHeight = '0'; // Temporarily remove min-height constraint
+            pane.style.maxHeight = 'none'; // Temporarily remove max-height constraint
+            
+            // Force the height
+            setTimeout(() => {
+                pane.style.height = `${size}px`;
+                console.log('After timeout, details pane actual height:', pane.offsetHeight);
+            }, 0);
+            
+            savePaneSize('detailsPaneHeight', size);
+            previousDetailsHeight = size;
+            handle.classList.remove('collapsed');
+        }
+    } else {
+        // Collapse - save current size to _previous key FIRST, then collapse
+        if (paneType === 'left') {
+            const currentWidth = pane.offsetWidth;
+            console.log('Collapsing left pane, saving width:', currentWidth);
+            // Save the current non-zero size for later restore
+            savePaneSize('leftPaneWidth_previous', currentWidth);
+            previousLeftWidth = currentWidth;
+            // Now collapse to minimum width
+            pane.style.width = `${COLLAPSED_WIDTH}px`;
+            savePaneSize('leftPaneWidth', COLLAPSED_WIDTH);
+            handle.classList.add('collapsed');
+        } else {
+            const currentHeight = pane.offsetHeight;
+            console.log('Collapsing details pane, saving height:', currentHeight);
+            savePaneSize('detailsPaneHeight_previous', currentHeight);
+            previousDetailsHeight = currentHeight;
+            pane.style.height = `${COLLAPSED_WIDTH}px`;
+            savePaneSize('detailsPaneHeight', COLLAPSED_WIDTH);
+            handle.classList.add('collapsed');
+        }
+    }
+}
+
+/**
+ * Save pane size to localStorage
+ */
+function savePaneSize(key, value) {
+    try {
+        localStorage.setItem(key, value.toString());
+        console.log(`Saved ${key} = ${value} to localStorage`);
+    } catch (e) {
+        console.error('Failed to save pane size:', e);
+    }
+}
+
+/**
+ * Get saved pane size from localStorage
+ */
+function getSavedPaneSize(key) {
+    try {
+        const value = localStorage.getItem(key);
+        return value ? parseFloat(value) : null;
+    } catch (e) {
+        console.error('Failed to get pane size:', e);
+        return null;
+    }
+}
+
+/**
+ * Restore pane sizes from localStorage
+ */
+function restorePaneSizes() {
+    const COLLAPSED_THRESHOLD = 10;
+    const leftPane = document.querySelector('.pane-left');
+    const detailsPane = document.querySelector('.pane-details');
+    const horizontalHandle = document.getElementById('horizontal-resize');
+    const verticalHandle = document.getElementById('vertical-resize');
+    
+    console.log('Restoring pane sizes from localStorage...');
+    
+    // Restore left pane width
+    const savedLeftWidth = getSavedPaneSize('leftPaneWidth');
+    console.log('Saved left width:', savedLeftWidth);
+    if (savedLeftWidth !== null) {
+        leftPane.style.width = `${savedLeftWidth}px`;
+        if (savedLeftWidth <= COLLAPSED_THRESHOLD) {
+            horizontalHandle.classList.add('collapsed');
+            // Restore previous width for expand
+            previousLeftWidth = getSavedPaneSize('leftPaneWidth_previous') || DEFAULT_LEFT_WIDTH;
+            console.log('Left pane collapsed, previous width:', previousLeftWidth);
+        } else {
+            previousLeftWidth = savedLeftWidth;
+        }
+    }
+    
+    // Restore details pane height
+    const savedDetailsHeight = getSavedPaneSize('detailsPaneHeight');
+    console.log('Saved details height:', savedDetailsHeight);
+    if (savedDetailsHeight !== null) {
+        detailsPane.style.height = `${savedDetailsHeight}px`;
+        if (savedDetailsHeight <= COLLAPSED_THRESHOLD) {
+            verticalHandle.classList.add('collapsed');
+            const rightPane = document.querySelector('.pane-right');
+            const defaultHeight = rightPane.offsetHeight * (DEFAULT_DETAILS_HEIGHT_PERCENT / 100);
+            previousDetailsHeight = getSavedPaneSize('detailsPaneHeight_previous') || defaultHeight;
+            console.log('Details pane collapsed, previous height:', previousDetailsHeight);
+        } else {
+            previousDetailsHeight = savedDetailsHeight;
+        }
+    }
+    
+    // List all localStorage items for debugging
+    console.log('All localStorage keys:', Object.keys(localStorage));
+}
+
+/**
+ * Reset layout to defaults
+ */
+function resetLayout() {
+    const leftPane = document.querySelector('.pane-left');
+    const detailsPane = document.querySelector('.pane-details');
+    const horizontalHandle = document.getElementById('horizontal-resize');
+    const verticalHandle = document.getElementById('vertical-resize');
+    const rightPane = document.querySelector('.pane-right');
+    
+    // Reset left pane
+    leftPane.style.width = `${DEFAULT_LEFT_WIDTH}px`;
+    savePaneSize('leftPaneWidth', DEFAULT_LEFT_WIDTH);
+    previousLeftWidth = DEFAULT_LEFT_WIDTH;
+    horizontalHandle.classList.remove('collapsed');
+    
+    // Reset details pane
+    const defaultDetailsHeight = rightPane.offsetHeight * (DEFAULT_DETAILS_HEIGHT_PERCENT / 100);
+    detailsPane.style.height = `${defaultDetailsHeight}px`;
+    savePaneSize('detailsPaneHeight', defaultDetailsHeight);
+    previousDetailsHeight = defaultDetailsHeight;
+    verticalHandle.classList.remove('collapsed');
+    
+    console.log('Layout reset to defaults');
+}
