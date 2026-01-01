@@ -89,7 +89,11 @@ body {
     min-height: 150px;
     max-height: 500px;
     flex-shrink: 0;
+    position:relative;
+
 }
+
+
 
 /* Notes pane - bottom section (80% height) */
 .pane-notes {
@@ -1147,11 +1151,16 @@ body {
 }
 
 .add-button.cancel-mode:hover {
-    background-color: #c0392b;
+    background-color: #c0392b;  
 }
 
 /* Tick button */
-.tick-button {
+.pane-details .tick-button {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    z-index:100;
+
     width: 32px;
     height: 32px;
     border-radius: 50%;
@@ -1167,20 +1176,20 @@ body {
     transition: all 0.2s ease;
 }
 
-.tick-button:not(.disabled) {
+.pane-details .tick-button:not(.disabled) {
     background-color: var(--color-accent);
     cursor: pointer;
 }
 
-.tick-button:not(.disabled):hover {
+.pane-details .tick-button:not(.disabled):hover {
     background-color: var(--color-accent-bright);
 }
 
-.tick-button:not(.disabled):active {
+.pane-details .tick-button:not(.disabled):active {
     transform: scale(0.95);
 }
 
-.tick-button.disabled {
+.pane-details .tick-button.disabled {
     cursor: not-allowed;
     opacity: 0.5;
 }

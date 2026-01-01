@@ -1184,7 +1184,9 @@ async function enterAddMode() {
     tickButton.textContent = '✓';
     tickButton.id = 'tick-button';
     tickButton.addEventListener('click', submitNewClient);
-    buttonContainer.insertBefore(tickButton, addButton);
+    const detailsPane = document.querySelector('.pane-details');
+    detailsPane.appendChild(tickButton);
+    //buttonContainer.insertBefore(tickButton, addButton);
     
     // THEN transform + button to X (rotate it 45 degrees) - use setTimeout to ensure DOM has settled
     setTimeout(() => {
@@ -1398,34 +1400,28 @@ function exitAddMode(requireConfirmation = true) {
     const clientList = document.querySelector('.client-list');
     clientList.classList.remove('disabled');
     
-    // Remove button container and restore add button
-    const buttonContainer = document.getElementById('header-buttons');
-    const addButton = document.querySelector('.add-button');
-    const customerListHeader = document.querySelector('.pane-left .pane-header');
-    
-    if (buttonContainer && addButton) {
-        // Remove cancel-mode class to rotate back to + first
-        addButton.classList.remove('cancel-mode');
-        
-        // Wait for rotation animation to complete, then move button
-        setTimeout(() => {
-            // Move add button back to header
-            customerListHeader.appendChild(addButton);
-            // Remove the container
-            buttonContainer.remove();
-        }, 500); // Match the CSS transition duration
+    // Remove tick button from details pane
+    const tickButton = document.getElementById('tick-button');
+    if (tickButton) {
+        tickButton.remove();
     }
-    
+
+    // Reset add button (remove X, turn back to +)
+    const addButton = document.querySelector('.add-button');
+    if (addButton) {
+        addButton.classList.remove('cancel-mode');
+    }
+
     // Clear details grid
     const detailsGrid = document.getElementById('client-details-grid');
     detailsGrid.innerHTML = '<p class="empty-message">Select a client to view details</p>';
-    
+
     // Clear notes section
     const notesContainer = document.querySelector('.pane-notes .pane-content');
     notesContainer.innerHTML = '<p class="empty-message">Select a client to view notes</p>';
-    
+
     console.log('Add mode exited');
-}
+    }
 
 /**
  * Show confirmation dialog for exiting add mode
