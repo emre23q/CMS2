@@ -1026,6 +1026,35 @@ function formatFieldName(fieldName) {
 }
 
 /**
+ * Capitalize text (first letter of each word)
+ * Excludes email fields
+ */
+function capitalizeField(fieldName, value) {
+    // Don't capitalize email fields
+    if (fieldName.toLowerCase().includes('email')) {
+        return value;
+    }
+    
+    // Don't capitalize empty values or dashes
+    if (!value || value.trim() === '' || value.trim() === '-') {
+        return value;
+    }
+    
+    // Capitalize first letter of each word, but keep numbers as-is
+    return value
+        .split(' ')
+        .map(word => {
+            // If word is purely numeric, keep it as-is
+            if (/^\d+$/.test(word)) {
+                return word;
+            }
+            // Otherwise capitalize first letter
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+}
+
+/**
  * Format date for display (note timestamps)
  */
 function formatDate(dateString) {
@@ -1321,9 +1350,9 @@ function collectClientData() {
             }
         }
         
-        // Only add non-empty values
+        // Only add non-empty values (capitalize non-email fields)
         if (value !== '') {
-            clientData[fieldName] = value;
+            clientData[fieldName] = capitalizeField(fieldName, value);
         }
     });
     
@@ -1647,9 +1676,9 @@ async function saveFieldEdit(span, fieldName, newValue) {
     if (!currentClientID) return;
     
     try {
-        // Prepare update data
+        // Prepare update data (capitalize non-email fields)
         const updateData = {};
-        updateData[fieldName] = newValue;
+        updateData[fieldName] = capitalizeField(fieldName, newValue);
         
         // Call API
         await window.api.updateClient(currentClientID, updateData);
@@ -1659,7 +1688,7 @@ async function saveFieldEdit(span, fieldName, newValue) {
         const isDateField = fieldMeta && fieldMeta.dataType === 'DATE';
         
         // Format value for display (convert YYYY-MM-DD back to DD-MM-YYYY for dates)
-        let displayValue = newValue;
+        let displayValue = capitalizeField(fieldName, newValue);
         if (isDateField && newValue) {
             displayValue = formatDateField(newValue);
         }
