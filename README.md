@@ -33,7 +33,7 @@ A desktop application for managing client information, notes, and attachments. B
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/cms.git
+git clone https://github.com/emre23q/CMS2.git
 cd cms
 ```
 
