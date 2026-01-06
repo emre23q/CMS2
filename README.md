@@ -21,7 +21,7 @@ A desktop application for managing client information, notes, and attachments. B
 - **HTML/CSS** - Responsive UI with custom styling
 
 ## Getting Started
-- Download and install the exe found in the 'dist' directory or build it yourself by following the below mentioned steps.
+- Download and install the exe found in the releases section or build it yourself by following the below mentioned steps.
 - **Note about Windows Installer**: The generated `.exe` installer will likely be flagged by Windows Defender/SmartScreen as an unrecognized app. This is normal for unsigned applications. For development/demo purposes, users can bypass the warning by clicking "More info" → "Run anyway" in the SmartScreen dialog.
 
 ### Prerequisites
