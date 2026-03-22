@@ -923,7 +923,32 @@ body {
     background: none;
     border-color: var(--color-border);
 }
+/* Gender dropdown */
+.detail-item .field-select {
+    font-size: var(--font-md);
+    color: var(--color-text-primary);
+    background-color: var(--color-bg-tertiary);
+    padding: 8px 12px;
+    border-radius: 4px;
+    min-height: 32px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+}
 
+.detail-item .field-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-accent);
+    background-color: #353535;
+}
+
+.detail-item .field-select option {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+}
 .add-field-form {
     display: flex;
     flex-direction: column;

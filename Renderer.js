@@ -824,6 +824,27 @@ async function loadClientDetails(clientID) {
             const label = document.createElement('label');
             label.textContent = formatFieldName(key);
             
+            // Gender gets a dropdown
+            if (key === 'gender') {
+                const select = document.createElement('select');
+                select.dataset.field = key;
+                select.className = 'field-select';
+                ['', 'Male', 'Female', 'Undefined'].forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt || '-- Select --';
+                    if ((value || '') === opt) option.selected = true;
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', async () => {
+                    await window.api.updateClient(currentClientID, { gender: select.value });
+                });
+                detailItem.appendChild(label);
+                detailItem.appendChild(select);
+                detailsGrid.appendChild(detailItem);
+                return; // skip the rest of the loop for this field
+            }
+
             // Create value span
             const span = document.createElement('span');
             span.dataset.field = key;
@@ -1176,12 +1197,25 @@ async function enterAddMode() {
             span.textContent = today;
             span.classList.add('uneditable');
             span.contentEditable = 'false';
+        } else if (field.name === 'gender') {
+            const select = document.createElement('select');
+            select.dataset.field = 'gender';
+            select.className = 'field-select';
+            ['', 'Male', 'Female', 'Undefined'].forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt || '-- Select --';
+                select.appendChild(option);
+            });
+            detailItem.appendChild(label);
+            detailItem.appendChild(select);
+            detailsGrid.appendChild(detailItem);
+            return; // skip rest of loop
         } else {
             // All other fields are editable
             span.textContent = '';
             span.contentEditable = 'true';
             
-            // Add red border to required empty fields
             if (field.notnull === 1) {
                 span.classList.add('required-empty');
             }
@@ -1236,7 +1270,7 @@ function validateRequiredFields() {
     
     let allValid = true;
     
-    const spans = document.querySelectorAll('#client-details-grid span[data-field]');
+    const spans = document.querySelectorAll('#client-details-grid span[data-field], #client-details-grid select[data-field]');
     
     spans.forEach(span => {
         const fieldName = span.dataset.field;
@@ -1331,7 +1365,7 @@ function parseDateInput(inputString) {
 function collectClientData() {
     const clientData = {};
     
-    const spans = document.querySelectorAll('#client-details-grid span[data-field]');
+    const spans = document.querySelectorAll('#client-details-grid span[data-field], #client-details-grid select[data-field]');
     
     spans.forEach(span => {
         const fieldName = span.dataset.field;
@@ -1339,8 +1373,7 @@ function collectClientData() {
         // Skip clientID (auto-generated)
         if (fieldName === 'clientID') return;
         
-        let value = span.textContent.trim();
-        
+        let value = span.tagName === 'SELECT' ? span.value : span.textContent.trim();        
         // Parse date fields (check fieldMetadata to see if it's a DATE type)
         const fieldMeta = fieldMetadata.find(f => f.fieldName === fieldName);
         if (fieldMeta && fieldMeta.dataType === 'DATE') {

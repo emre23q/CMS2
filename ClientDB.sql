@@ -3,7 +3,7 @@ PRAGMA foreign_keys = ON;
 
 -- Client table
 CREATE TABLE IF NOT EXISTS Client (
-  clientID      INTEGER   PRIMARY KEY,
+  clientID      INTEGER   PRIMARY KEY AUTOINCREMENT,
   firstName     TEXT      NOT NULL,
   lastName      TEXT      NOT NULL,
   dob           DATE      ,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS Client (
 
 -- History table
 CREATE TABLE IF NOT EXISTS History (
-  noteID        INTEGER   PRIMARY KEY,
+  noteID        INTEGER   PRIMARY KEY AUTOINCREMENT,
   clientID      INTEGER   NOT NULL
                          REFERENCES Client(clientID)
                          ON DELETE CASCADE,
