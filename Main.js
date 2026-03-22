@@ -231,22 +231,18 @@ ipcMain.handle('add-client', (event, clientData) => {
 
 ipcMain.handle('delete-client', (event, clientID) => {
     try {
-        // Delete client from database (CASCADE will delete all notes)
+        // 1. Delete files FIRST (before committing DB change)
+        const userDataPath = app.getPath('userData');
+        const clientAttachmentsPath = path.join(userDataPath, 'Database', 'Attachments', String(clientID));
+        if (fs.existsSync(clientAttachmentsPath)) {
+            fs.rmSync(clientAttachmentsPath, { recursive: true, force: true });
+        }
+        
+        // 2. Only then delete from DB and save
         db.run("DELETE FROM Client WHERE clientID = ?", [clientID]);
         saveDatabase();
         
-        // Delete all attachments for this client - USE USERDATA PATH
-        const userDataPath = app.getPath('userData');
-        const clientAttachmentsPath = path.join(userDataPath, 'Database', 'Attachments', String(clientID));
-        
-        if (fs.existsSync(clientAttachmentsPath)) {
-            fs.rmSync(clientAttachmentsPath, { recursive: true, force: true });
-            console.log('Deleted attachments for client:', clientID);
-        }
-        
-        console.log('Deleted client:', clientID);
         return true;
-        
     } catch (error) {
         console.error('Error deleting client:', error);
         throw new Error('Failed to delete client: ' + error.message);
